@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circles — Private E2E Encrypted Chat</title>
+<meta name="description" content="A quiet, end-to-end encrypted private space for the people closest to you. Messages are encrypted in your browser — no one else can read them.">
+
+<!-- Firebase SDK v10 (compat mode — works with CDN, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS
+================================================================ */
+:root {
+  --bg:           #0D0C1A;
+  --panel:        #181729;
+  --panel-raised: #201E35;
+  --line:         #2A2844;
+  --text:         #F0EEFF;
+  --muted:        #7C79A0;
+  --coral:        #FF7B6B;
+  --pink:         #FF5C8B;
+  --gold:         #FFD180;
+  --sage:         #8FD5C8;
+  --lav:          #C4B5FD;
+  --danger:       #FF5C5C;
+  --success:      #5FE8B8;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Manrope', -apple-system, sans-serif;
+}
+
+/* ================================================================
+   RESET & BASE
+================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font-body);
+  background:
+    radial-gradient(ellipse 1600px 700px at 10% -15%, rgba(70,50,160,0.45) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 600px at 100% 110%, rgba(255,92,139,0.14) 0%, transparent 55%),
+    var(--bg);
+  color: var(--text);
+}
+#app { height: 100%; }
+.hidden { display: none !important; }
+
+/* ================================================================
+   SCROLLBAR
+================================================================ */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ================================================================
+   SHARED COMPONENTS
+================================================================ */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-ring {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--coral);
+  border-top-color: var(--gold);
+  border-right-color: var(--sage);
+  animation: spin 8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  background: linear-gradient(130deg, var(--text) 40%, var(--lav));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.e2e-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--success);
+  background: rgba(95,232,184,0.1);
+  border: 1px solid rgba(95,232,184,0.25);
+  border-radius: 20px;
+  padding: 3px 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.e2e-pill::before { content: "🔒"; font-size: 9px; }
+
+.btn {
+  width: 100%;
+  padding: 13px 0;
+  border-radius: 13px;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: transform 0.1s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  background: linear-gradient(135deg, var(--coral), var(--pink));
+  color: #fff;
+  box-shadow: 0 4px 22px rgba(255,92,139,0.3);
+}
+.btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 6px 30px rgba(255,92,139,0.42); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-ghost {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  box-shadow: none;
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--coral); color: var(--coral); opacity: 1; box-shadow: none; }
+
+label {
+  display: block;
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 7px;
+  margin-top: 18px;
+}
+label:first-of-type { margin-top: 0; }
+
+input[type="text"], input[type="password"], input:not([type]), textarea, select {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input:focus, textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,123,107,0.12); }
+input::placeholder, textarea::placeholder { color: #42405F; }
+
+.err-msg {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin-top: 10px;
+  font-weight: 700;
+  display: none;
+  animation: shake 0.3s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.65; }
+
+/* Spinner */
+.spinner {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ================================================================
+   SETUP SCREEN (shown when Firebase not configured)
+================================================================ */
+#setupScreen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.setup-card {
+  width: 100%;
+  max-width: 600px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 42px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.setup-card::before {
+  content: "";
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--coral), var(--lav), var(--sage), var(--coral));
+  opacity: 0.1;
+  filter: blur(20px);
+  pointer-events: none;
+}
+.setup-card h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.setup-card > p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+.setup-steps { margin: 20px 0 24px; display: flex; flex-direction: column; gap: 14px; }
+.setup-step { display: flex; gap: 13px; align-items: flex-start; }
+.step-num {
+  width: 26px; height: 26px; min-width: 26px;
+  background: linear-gradient(135deg, var(--coral), var(--pink));
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  flex-shrink: 0;
+}
+.setup-step p { color: var(--muted); font-size: 13.5px; line-height: 1.6; margin: 0; }
+.setup-step p strong { color: var(--text); }
+.setup-step a { color: var(--coral); text-decoration: none; }
+.setup-step a:hover { text-decoration: underline; }
+.setup-step code {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  color: var(--lav);
+}
+.config-block {
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 12.5px;
+  color: var(--lav);
+  line-height: 1.8;
+  white-space: pre;
+  overflow-x: auto;
+  margin-top: 14px;
+  position: relative;
+}
+.config-comment { color: var(--muted); }
+.config-key { color: var(--sage); }
+.config-val { color: var(--gold); }
+
+/* ================================================================
+   AUTH SCREEN
+================================================================ */
+#authScreen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 36px 34px 34px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: conic-gradient(from 200deg, var(--coral), var(--gold), var(--sage), var(--lav), var(--coral));
+  opacity: 0.13;
+  filter: blur(18px);
+  pointer-events: none;
+}
+.brand-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.tagline { color: var(--muted); font-size: 13.5px; margin-bottom: 24px; line-height: 1.55; }
+
+.tabs {
+  display: flex; gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 22px;
+}
+.tab {
+  flex: 1; text-align: center;
+  padding: 9px 0;
+  border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.tab.active { background: var(--panel-raised); color: var(--text); }
+.tab:hover:not(.active) { color: var(--text); }
+
+.circle-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.type-opt {
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.type-opt .lbl { display: block; font-size: 9px; margin-top: 4px; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.type-opt.active { border-color: var(--coral); background: rgba(255,123,107,0.1); }
+.type-opt:hover:not(.active) { border-color: var(--line); background: var(--panel-raised); }
+
+/* ================================================================
+   MAIN SCREEN SHELL
+================================================================ */
+#mainScreen { height: 100vh; display: flex; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 275px; flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  transition: transform 0.22s ease;
+}
+.sidebar-head {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.me-row { display: flex; align-items: center; gap: 10px; }
+.me-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--lav), var(--sage));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #1B1A2E; font-size: 13px; flex-shrink: 0;
+}
+.me-info { flex: 1; min-width: 0; }
+.me-name { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-sub { font-size: 11px; color: var(--success); font-weight: 600; }
+.logout-btn {
+  font-size: 11px; color: var(--muted);
+  background: none; border: none; cursor: pointer;
+  text-decoration: underline;
+  font-family: var(--font-body);
+  flex-shrink: 0;
+}
+.logout-btn:hover { color: var(--coral); }
+
+.circles-list { flex: 1; overflow-y: auto; padding: 10px; }
+.circles-label {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--muted); padding: 8px 8px 6px;
+}
+
+.circle-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 10px;
+  border-radius: 13px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background 0.12s ease;
+  position: relative;
+}
+.circle-item:hover { background: var(--panel-raised); }
+.circle-item.active { background: var(--panel-raised); box-shadow: inset 3px 0 0 var(--coral); }
+
+.circle-orb {
+  width: 40px; height: 40px; border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  position: relative;
+}
+.online-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--success);
+  border: 2px solid var(--panel);
+  display: none;
+  box-shadow: 0 0 6px var(--success);
+}
+.online-dot.on { display: block; animation: pulse-dot 2.5s ease infinite; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.circle-meta { min-width: 0; flex: 1; }
+.circle-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.circle-last { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+.add-circle-btn {
+  margin: 8px 10px 12px;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  font-family: var(--font-body);
+  transition: all 0.15s ease;
+}
+.add-circle-btn:hover { border-color: var(--coral); color: var(--coral); }
+
+/* ── Chat Panel ── */
+#chatPanel { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+#emptyState {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px; color: var(--muted);
+  text-align: center;
+  padding: 20px;
+}
+#emptyState .brand-ring { width: 52px; height: 52px; border-width: 4px; margin-bottom: 4px; }
+#emptyState p { font-size: 14px; color: var(--muted); }
+
+.chat-head {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+  background: rgba(24,23,41,0.85);
+  backdrop-filter: blur(12px);
+}
+.chat-head-orb {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; flex-shrink: 0;
+}
+.chat-head-info { flex: 1; min-width: 0; }
+.chat-head-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.chat-head-sub {
+  font-size: 11px; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 2px;
+}
+.online-count { color: var(--success); font-weight: 700; }
+
+.head-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.head-btn {
+  font-size: 11.5px; color: var(--muted);
+  background: rgba(42,40,68,0.7);
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 700;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+}
+.head-btn:hover { border-color: var(--coral); color: var(--coral); background: rgba(255,123,107,0.08); }
+
+/* ── Messages ── */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.msg-row { display: flex; max-width: 68%; flex-direction: column; }
+.msg-row.mine { align-self: flex-end; align-items: flex-end; }
+.msg-row.theirs { align-self: flex-start; align-items: flex-start; }
+.msg-sender { font-size: 10.5px; color: var(--muted); font-weight: 800; margin: 12px 4px 3px; letter-spacing: 0.04em; }
+.msg-bubble {
+  padding: 10px 15px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+.msg-row.mine .msg-bubble {
+  background: linear-gradient(135deg, var(--coral), var(--pink));
+  color: #fff;
+  border-bottom-right-radius: 5px;
+  box-shadow: 0 2px 10px rgba(255,92,139,0.25);
+}
+.msg-row.theirs .msg-bubble {
+  background: var(--panel-raised);
+  border-bottom-left-radius: 5px;
+  color: var(--text);
+}
+.msg-time { font-size: 10px; color: var(--muted); margin: 3px 5px 0; }
+.msg-row.system { align-self: center; max-width: 90%; margin: 6px 0; }
+.msg-row.system .msg-bubble {
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-style: italic;
+  padding: 4px 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* ── Composer ── */
+.composer {
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--line);
+  display: flex; gap: 10px; align-items: flex-end;
+  background: rgba(24,23,41,0.85);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+.composer textarea {
+  flex: 1; resize: none;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  color: var(--text);
+  padding: 12px 15px;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  outline: none;
+  max-height: 120px;
+  line-height: 1.4;
+  transition: border-color 0.15s ease;
+}
+.composer textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,123,107,0.1); }
+.send-btn {
+  width: 45px; height: 45px; border-radius: 50%; flex-shrink: 0;
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--coral), var(--pink));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; color: #fff;
+  box-shadow: 0 3px 16px rgba(255,92,139,0.35);
+  transition: transform 0.12s ease, box-shadow 0.15s ease;
+}
+.send-btn:hover { box-shadow: 0 5px 22px rgba(255,92,139,0.5); }
+.send-btn:active { transform: scale(0.91); }
+
+/* ── Modals ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(6,5,18,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 24px;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-card {
+  width: 100%; max-width: 400px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 30px;
+  position: relative;
+  animation: slideUp 0.2s cubic-bezier(.16,1,.3,1);
+}
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--muted); line-height: 1.55; }
+.close-x {
+  position: absolute; top: 18px; right: 20px;
+  background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+}
+.close-x:hover { color: var(--text); background: var(--panel-raised); }
+
+/* ── Mobile ── */
+.menu-btn {
+  display: none;
+  background: none; border: none; color: var(--text);
+  font-size: 20px; cursor: pointer; margin-right: 2px;
+  padding: 4px;
+}
+@media (max-width: 720px) {
+  #sidebar {
+    position: fixed; z-index: 50; height: 100%;
+    transform: translateX(-100%);
+  }
+  #sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.5); }
+  .menu-btn { display: flex !important; }
+  .msg-row { max-width: 88%; }
+  #messages { padding: 14px 14px; }
+  .chat-head { padding: 12px 14px; }
+  .composer { padding: 10px 14px 14px; }
+  .head-btn span { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════════════════════════════════════════
+     SETUP SCREEN (shown when Firebase not configured)
+══════════════════════════════════════════════════ -->
+<div id="setupScreen" class="hidden">
+  <div class="setup-card">
+    <div class="brand" style="margin-bottom:14px">
+      <div class="brand-ring"></div>
+      <div class="brand-name">Circles</div>
+      <span class="e2e-pill">E2E Encrypted</span>
+    </div>
+    <p>Circles uses <strong>Firebase Realtime Database</strong> as its backend so anyone in the world can join your circles in real time — all messages are encrypted in your browser before being sent.</p>
+    <p style="margin-top:6px">Follow these quick steps to connect your free Firebase project:</p>
+    <div class="setup-steps">
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <p>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> → <strong>Add project</strong> → name it anything → disable Analytics → <strong>Create project</strong></p>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <p>In your project: <strong>Build → Realtime Database → Create Database</strong> → choose any region → start in <strong>test mode</strong> → Enable</p>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <p>Click the <strong>⚙️ gear icon → Project Settings → Your apps → &lt;/&gt; Web</strong> → register the app → copy the <code>firebaseConfig</code> object</p>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">4</div>
+        <p>Open <strong>index.html</strong> in a text editor → scroll to the bottom → find <code>FIREBASE_CONFIG</code> → replace the placeholder values with your config values, then reload</p>
+      </div>
+    </div>
+    <div class="config-block"><span class="config-comment">// Replace these values in index.html:</span>
+<span class="config-key">const FIREBASE_CONFIG</span> = {
+  <span class="config-key">apiKey</span>:            <span class="config-val">"AIzaSy..."</span>,
+  <span class="config-key">authDomain</span>:        <span class="config-val">"my-circles.firebaseapp.com"</span>,
+  <span class="config-key">databaseURL</span>:       <span class="config-val">"https://my-circles-default-rtdb.firebaseio.com"</span>,
+  <span class="config-key">projectId</span>:         <span class="config-val">"my-circles"</span>,
+  <span class="config-key">storageBucket</span>:     <span class="config-val">"my-circles.appspot.com"</span>,
+  <span class="config-key">messagingSenderId</span>: <span class="config-val">"123456789"</span>,
+  <span class="config-key">appId</span>:             <span class="config-val">"1:123:web:abc..."</span>
+};</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════════════ -->
+<div id="authScreen" class="hidden">
+  <div class="auth-card">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="brand-ring"></div>
+        <div class="brand-name">Circles</div>
+      </div>
+      <span class="e2e-pill">E2E Encrypted</span>
+    </div>
+    <div class="tagline">A quiet, encrypted space for the people closest to you. Messages live only between your devices.</div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="join">Join a Circle</div>
+      <div class="tab" data-tab="create">Start a Circle</div>
+    </div>
+
+    <!-- Join pane -->
+    <div id="joinPane">
+      <label>Your name</label>
+      <input id="joinName" type="text" placeholder="What should people call you?" maxlength="24" autocomplete="off">
+      <label>Circle code</label>
+      <input id="joinCode" type="text" placeholder="e.g. sunset-otter-42" maxlength="60" autocomplete="off" spellcheck="false">
+      <label>Passcode</label>
+      <input id="joinPasscode" type="password" placeholder="Leave blank if the circle has none" maxlength="128" autocomplete="off">
+      <button class="btn" id="joinBtn">Join Circle</button>
+      <div class="err-msg" id="joinErr"></div>
+      <div class="hint">Ask the circle creator for their code and passcode. Your messages are decrypted only in your browser — never on any server.</div>
+    </div>
+
+    <!-- Create pane -->
+    <div id="createPane" class="hidden">
+      <label>Your name</label>
+      <input id="createName" type="text" placeholder="What should people call you?" maxlength="24" autocomplete="off">
+      <label>Circle name</label>
+      <input id="createCircleName" type="text" placeholder="e.g. The Sharma Family" maxlength="40" autocomplete="off">
+      <label>Type</label>
+      <div class="circle-type-grid" id="typeGrid">
+        <div class="type-opt active" data-type="couple">💞<span class="lbl">Couple</span></div>
+        <div class="type-opt" data-type="family">🏡<span class="lbl">Family</span></div>
+        <div class="type-opt" data-type="friends">✨<span class="lbl">Friends</span></div>
+        <div class="type-opt" data-type="child">🧸<span class="lbl">Parent&Child</span></div>
+      </div>
+      <label>Passcode — strongly recommended</label>
+      <input id="createPasscode" type="password" placeholder="The stronger, the more private" maxlength="128" autocomplete="new-password">
+      <button class="btn" id="createBtn">Create Circle</button>
+      <div class="err-msg" id="createErr"></div>
+      <div class="hint">🔒 Your passcode is the encryption key. Without it, nobody — not even Firebase — can read your messages. <strong>Share it only with the people you invite.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MAIN SCREEN
+══════════════════════════════════════════════════ -->
+<div id="mainScreen" class="hidden">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-head">
+      <div class="me-row">
+        <div class="me-avatar" id="meAvatar">?</div>
+        <div class="me-info">
+          <div class="me-name" id="meName">—</div>
+          <div class="me-sub">● online</div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">switch</button>
+      </div>
+    </div>
+    <div class="circles-list" id="circlesList">
+      <div class="circles-label">Your circles</div>
+    </div>
+    <button class="add-circle-btn" id="addCircleBtn">+ Join or start another circle</button>
+  </div>
+
+  <!-- Chat panel -->
+  <div id="chatPanel">
+    <!-- Empty state -->
+    <div id="emptyState">
+      <div class="brand-ring"></div>
+      <p>Pick a circle to start chatting</p>
+      <span class="e2e-pill">End-to-end encrypted</span>
+    </div>
+
+    <!-- Active chat -->
+    <div id="activeChat" class="hidden" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <div class="chat-head">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div class="chat-head-orb" id="headOrb">💞</div>
+        <div class="chat-head-info">
+          <div class="chat-head-title" id="headTitle">—</div>
+          <div class="chat-head-sub" id="headSub">
+            <span class="e2e-pill" style="font-size:9px;padding:2px 7px;">E2E</span>
+          </div>
+        </div>
+        <div class="head-actions">
+          <button class="head-btn" id="inviteBtn" title="Copy shareable invite link">🔗 <span>Invite</span></button>
+          <button class="head-btn" id="headCode" title="Copy circle code">📋 <span>Copy code</span></button>
+        </div>
+      </div>
+      <div id="messages"></div>
+      <div class="composer">
+        <textarea id="msgInput" rows="1" placeholder="Write something… (encrypted end-to-end)"></textarea>
+        <button class="send-btn" id="sendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Re-key Modal (shown when circle opened but key missing after reload) -->
+<div id="rekeyModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button class="close-x" id="rekeyClose">✕</button>
+    <div class="modal-title">🔒 Re-enter Passcode</div>
+    <div class="modal-sub" style="margin-bottom:16px">Your encryption key is cleared on reload for security. Re-enter the passcode to decrypt messages in this circle.</div>
+    <input id="rekeyPasscode" type="password" placeholder="Circle passcode (or leave blank if none)" maxlength="128" autocomplete="off">
+    <button class="btn" id="rekeyBtn" style="margin-top:14px">Unlock Circle</button>
+    <div class="err-msg" id="rekeyErr"></div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ================================================================
+// 🔥 FIREBASE CONFIGURATION
+// Replace these placeholder values with your own Firebase project config.
+//
+// How to get them:
+//   1. Go to https://console.firebase.google.com
+//   2. Open your project → ⚙️ Project Settings → Your apps → Web app
+//   3. Copy the firebaseConfig object values below
+// ================================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAC_IyxR7k1GiM_p2tC3fXV4qenUHvPZyA",
+  authDomain:        "circle-b5f22.firebaseapp.com",
+  databaseURL:       "https://circle-b5f22-default-rtdb.firebaseio.com",
+  projectId:         "circle-b5f22",
+  storageBucket:     "circle-b5f22.firebasestorage.app",
+  messagingSenderId: "990843271090",
+  appId:             "1:990843271090:web:a80d16ed64cf0e767116ab"
+};
+// ================================================================
+
+(async function () {
+  'use strict';
+
+  // ── Constants ──
+  const TYPE_EMOJI = { couple: '💞', family: '🏡', friends: '✨', child: '🧸' };
+  const TYPE_LABEL = { couple: 'Couple', family: 'Family', friends: 'Friends', child: 'Parent & Child' };
+
+  // ── App State ──
+  let me = null;                  // { name }
+  let myCircles = [];             // [{ code, name, type }]
+  let circleKeys = {};            // code → CryptoKey (in-memory only, cleared on reload)
+  let activeCode = null;
+  let activeListenerRef = null;   // Firebase ref with active .on() listener
+  let activeListener = null;      // the listener function
+  let presenceTimer = null;
+  let rekeyTargetCode = null;     // circle code waiting for re-key
+  let db = null;
+
+  // ── Firebase Init ──
+  const IS_CONFIGURED = !FIREBASE_CONFIG.apiKey.startsWith('YOUR_');
+
+  if (!IS_CONFIGURED) {
+    show('setupScreen');
+    return;
+  }
+
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+  } catch (e) {
+    alert('Firebase initialization failed.\n\nCheck that your FIREBASE_CONFIG values are correct.\n\nError: ' + e.message);
+    show('setupScreen');
+    return;
+  }
+
+  // Restore session (circle list only — keys are never persisted)
+  myCircles = JSON.parse(sessionStorage.getItem('circles_mine') || '[]');
+
+  show('authScreen');
+  applyInviteHash();
+
+  // ================================================================
+  // URL INVITE HASH
+  // ================================================================
+  function applyInviteHash() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    try {
+      const params = new URLSearchParams(hash);
+      const code = params.get('join');
+      if (code) {
+        switchTab('join');
+        document.getElementById('joinCode').value = decodeURIComponent(code);
+        document.getElementById('joinName').focus();
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch { /* ignore malformed hash */ }
+  }
+
+  // ================================================================
+  // E2E ENCRYPTION — Web Crypto API (AES-256-GCM + PBKDF2)
+  // ================================================================
+
+  /** Derive a 256-bit AES-GCM key from a passcode and circle code via PBKDF2. */
+  async function deriveKey(passcode, circleCode) {
+    const secret = (passcode && passcode.trim()) ? passcode : circleCode;
+    const enc = new TextEncoder();
+    // Import the raw secret as PBKDF2 key material
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey']
+    );
+    // Use a deterministic salt based on the circle code (first 16 bytes, padded)
+    const saltStr = (circleCode + '0000000000000000').slice(0, 16);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode(saltStr), iterations: 150000, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  /** Encrypt a UTF-8 string to {ciphertext, iv} — both base64-encoded. */
+  async function encryptText(key, plaintext) {
+    const enc = new TextEncoder();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+    return {
+      ciphertext: bufToB64(cipherBuf),
+      iv: bufToB64(iv.buffer)
+    };
+  }
+
+  /** Decrypt base64-encoded ciphertext+iv back to a UTF-8 string. Returns error marker on failure. */
+  async function decryptText(key, ciphertext, iv) {
+    try {
+      const plainBuf = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: b64ToBuf(iv) },
+        key,
+        b64ToBuf(ciphertext)
+      );
+      return new TextDecoder().decode(plainBuf);
+    } catch {
+      return '🔒 [encrypted — wrong key or corrupted]';
+    }
+  }
+
+  /** Compute SHA-256 hash of a passcode string → base64. Returns null if empty. */
+  async function hashPasscode(passcode) {
+    if (!passcode || !passcode.trim()) return null;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(passcode));
+    return bufToB64(buf);
+  }
+
+  function bufToB64(buf) {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  }
+  function b64ToBuf(b64) {
+    return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+  }
+
+  // ================================================================
+  // UTILITIES
+  // ================================================================
+
+  /** Generate a human-readable circle code like "sunset-otter-42". */
+  function genCode() {
+    const a = ['sunset', 'amber', 'quiet', 'maple', 'coral', 'velvet', 'gentle', 'misty', 'golden', 'still', 'silver', 'indigo', 'hidden', 'secret'];
+    const b = ['otter', 'harbor', 'willow', 'lantern', 'ember', 'meadow', 'falcon', 'ridge', 'brook', 'fern', 'haven', 'cedar', 'stone', 'hollow'];
+    const n = String(Math.floor(Math.random() * 900 + 100));
+    return `${pick(a)}-${pick(b)}-${n}`;
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /** HTML-escape a string to prevent XSS. */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function fmtTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function orbColor(type) {
+    return {
+      couple:  'rgba(255,92,139,0.22)',
+      family:  'rgba(255,209,128,0.22)',
+      friends: 'rgba(143,213,200,0.22)',
+      child:   'rgba(196,181,253,0.22)'
+    }[type] || 'rgba(255,255,255,0.1)';
+  }
+
+  /** Show only one top-level screen. */
+  function show(id) {
+    ['setupScreen','authScreen','mainScreen'].forEach(s => {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  /** Encode name for safe Firebase key (no . # $ [ ] / ). */
+  function safeKey(s) {
+    return encodeURIComponent(s).replace(/\./g, '%2E');
+  }
+
+  // ================================================================
+  // TABS
+  // ================================================================
+  function switchTab(which) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === which));
+    document.getElementById('joinPane').classList.toggle('hidden', which !== 'join');
+    document.getElementById('createPane').classList.toggle('hidden', which !== 'create');
+  }
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => switchTab(t.dataset.tab));
+  });
+
+  let selectedType = 'couple';
+  document.querySelectorAll('.type-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.type-opt').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      selectedType = el.dataset.type;
+    });
+  });
+
+  // ================================================================
+  // CREATE CIRCLE
+  // ================================================================
+  document.getElementById('createBtn').addEventListener('click', async () => {
+    const name   = document.getElementById('createName').value.trim();
+    const cname  = document.getElementById('createCircleName').value.trim();
+    const pass   = document.getElementById('createPasscode').value;
+    const errEl  = document.getElementById('createErr');
+    errEl.style.display = 'none';
+
+    if (!name) { return showErr(errEl, 'Please enter your name.'); }
+    if (!cname) { return showErr(errEl, 'Please give this circle a name.'); }
+
+    const btn = document.getElementById('createBtn');
+    setLoading(btn, true);
+
+    try {
+      const code = genCode();
+      const key  = await deriveKey(pass, code);
+      circleKeys[code] = key;
+
+      const passHash = await hashPasscode(pass);
+      const { ciphertext: encName, iv: encNameIv } = await encryptText(key, cname);
+
+      // Store circle meta (name encrypted, passcode as hash only)
+      await db.ref(`circles/${code}/meta`).set({
+        type: selectedType,
+        passHash: passHash,
+        encName: encName,
+        encNameIv: encNameIv,
+        createdAt: Date.now()
+      });
+
+      // First system message (encrypted)
+      const { ciphertext, iv } = await encryptText(key, `${cname} was created. Welcome! 🎉`);
+      await db.ref(`circles/${code}/messages`).push({
+        sender: 'Circles', ciphertext, iv, ts: Date.now(), system: true
+      });
+
+      me = { name };
+      addLocalCircle({ code, name: cname, type: selectedType });
+      enterApp();
+      openCircle(code);
+    } catch (e) {
+      showErr(errEl, 'Something went wrong. Check your Firebase config and try again.');
+      console.error('Create error:', e);
+    } finally {
+      setLoading(btn, false, 'Create Circle');
+    }
+  });
+
+  // ================================================================
+  // JOIN CIRCLE
+  // ================================================================
+  document.getElementById('joinBtn').addEventListener('click', async () => {
+    const name   = document.getElementById('joinName').value.trim();
+    const code   = document.getElementById('joinCode').value.trim().toLowerCase().replace(/\s+/g, '-');
+    const pass   = document.getElementById('joinPasscode').value;
+    const errEl  = document.getElementById('joinErr');
+    errEl.style.display = 'none';
+
+    if (!name) { return showErr(errEl, 'Please enter your name.'); }
+    if (!code) { return showErr(errEl, 'Please enter a circle code.'); }
+
+    const btn = document.getElementById('joinBtn');
+    setLoading(btn, true);
+
+    try {
+      const snap = await db.ref(`circles/${code}/meta`).get();
+      if (!snap.exists()) {
+        return showErr(errEl, "That circle code doesn't exist. Double-check with whoever invited you.");
+      }
+      const meta = snap.val();
+
+      // Validate passcode hash
+      const passHash = await hashPasscode(pass);
+      if (meta.passHash && meta.passHash !== passHash) {
+        return showErr(errEl, 'Incorrect passcode for this circle. Try again.');
+      }
+
+      // Derive encryption key
+      const key = await deriveKey(pass, code);
+      circleKeys[code] = key;
+
+      // Decrypt circle name
+      let circleName = code;
+      try { circleName = await decryptText(key, meta.encName, meta.encNameIv); } catch { /* keep fallback */ }
+
+      me = { name };
+      addLocalCircle({ code, name: circleName, type: meta.type });
+
+      // Send encrypted join message
+      const { ciphertext, iv } = await encryptText(key, `${name} joined the circle.`);
+      await db.ref(`circles/${code}/messages`).push({
+        sender: 'Circles', ciphertext, iv, ts: Date.now(), system: true
+      });
+
+      enterApp();
+      openCircle(code);
+    } catch (e) {
+      showErr(errEl, 'Something went wrong. Check your connection and try again.');
+      console.error('Join error:', e);
+    } finally {
+      setLoading(btn, false, 'Join Circle');
+    }
+  });
+
+  // ================================================================
+  // LOCAL CIRCLE LIST (session-scoped)
+  // ================================================================
+  function addLocalCircle(c) {
+    if (!myCircles.find(x => x.code === c.code)) {
+      myCircles.push(c);
+      sessionStorage.setItem('circles_mine', JSON.stringify(myCircles));
+    }
+  }
+
+  // ================================================================
+  // ENTER APP
+  // ================================================================
+  function enterApp() {
+    show('mainScreen');
+    document.getElementById('meName').textContent = me.name;
+    document.getElementById('meAvatar').textContent = me.name.slice(0, 2).toUpperCase();
+    renderCircleList();
+    startPresenceLoop();
+  }
+
+  // ================================================================
+  // SIDEBAR — Circle List
+  // ================================================================
+  function renderCircleList() {
+    const list = document.getElementById('circlesList');
+    list.innerHTML = '<div class="circles-label">Your circles</div>';
+    myCircles.forEach(c => {
+      const hasKey = !!circleKeys[c.code];
+      const div = document.createElement('div');
+      div.className = 'circle-item' + (c.code === activeCode ? ' active' : '');
+      div.id = `ci-${c.code}`;
+      div.innerHTML = `
+        <div class="circle-orb" style="background:${orbColor(c.type)}">
+          ${TYPE_EMOJI[c.type] || '👥'}
+          <span class="online-dot" id="dot-${c.code}"></span>
+        </div>
+        <div class="circle-meta">
+          <div class="circle-name">${esc(c.name)}</div>
+          <div class="circle-last" id="last-${c.code}">${hasKey ? (TYPE_LABEL[c.type] || '') : '🔒 tap to unlock'}</div>
+        </div>`;
+      div.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('open');
+        if (!circleKeys[c.code]) {
+          promptRekey(c.code);
+        } else {
+          openCircle(c.code);
+        }
+      });
+      list.appendChild(div);
+    });
+  }
+
+  // ================================================================
+  // RE-KEY MODAL (when key is missing after page reload)
+  // ================================================================
+  function promptRekey(code) {
+    rekeyTargetCode = code;
+    document.getElementById('rekeyPasscode').value = '';
+    document.getElementById('rekeyErr').style.display = 'none';
+    document.getElementById('rekeyModal').classList.remove('hidden');
+    document.getElementById('rekeyPasscode').focus();
+  }
+
+  document.getElementById('rekeyClose').addEventListener('click', () => {
+    document.getElementById('rekeyModal').classList.add('hidden');
+    rekeyTargetCode = null;
+  });
+
+  document.getElementById('rekeyBtn').addEventListener('click', async () => {
+    const pass = document.getElementById('rekeyPasscode').value;
+    const errEl = document.getElementById('rekeyErr');
+    errEl.style.display = 'none';
+    if (!rekeyTargetCode) return;
+
+    const btn = document.getElementById('rekeyBtn');
+    setLoading(btn, true);
+
+    try {
+      const snap = await db.ref(`circles/${rekeyTargetCode}/meta`).get();
+      if (!snap.exists()) { return showErr(errEl, 'Circle not found.'); }
+      const meta = snap.val();
+
+      const passHash = await hashPasscode(pass);
+      if (meta.passHash && meta.passHash !== passHash) {
+        return showErr(errEl, 'Incorrect passcode. Try again.');
+      }
+
+      const key = await deriveKey(pass, rekeyTargetCode);
+      circleKeys[rekeyTargetCode] = key;
+
+      document.getElementById('rekeyModal').classList.add('hidden');
+      const code = rekeyTargetCode;
+      rekeyTargetCode = null;
+      openCircle(code);
+    } catch (e) {
+      showErr(errEl, 'Something went wrong. Try again.');
+      console.error('Rekey error:', e);
+    } finally {
+      setLoading(btn, false, 'Unlock Circle');
+    }
+  });
+
+  document.getElementById('rekeyPasscode').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('rekeyBtn').click();
+  });
+
+  // ================================================================
+  // OPEN A CIRCLE
+  // ================================================================
+  async function openCircle(code) {
+    activeCode = code;
+    renderCircleList();
+
+    const c = myCircles.find(x => x.code === code);
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('activeChat').classList.remove('hidden');
+    document.getElementById('activeChat').style.display = 'flex';
+
+    document.getElementById('headOrb').textContent = TYPE_EMOJI[c.type] || '👥';
+    document.getElementById('headOrb').style.background = orbColor(c.type);
+    document.getElementById('headTitle').textContent = c.name;
+    document.getElementById('headCode').setAttribute('data-code', code);
+    document.getElementById('messages').innerHTML = '<div style="display:flex;justify-content:center;padding:30px"><span class="spinner"></span></div>';
+    document.getElementById('msgInput').focus();
+
+    stopListening();
+    startListening(code);
+    heartbeat(); // immediate presence update
+  }
+
+  // ================================================================
+  // FIREBASE REALTIME LISTENER
+  // ================================================================
+  function startListening(code) {
+    const ref = db.ref(`circles/${code}/messages`).orderByChild('ts');
+    activeListenerRef = ref;
+    activeListener = ref.on('value', async snap => {
+      if (activeCode !== code) return; // stale listener
+      const key = circleKeys[code];
+      if (!key) return;
+
+      const container = document.getElementById('messages');
+      const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+      const data = snap.val() || {};
+      const msgs = Object.values(data).sort((a, b) => a.ts - b.ts);
+
+      container.innerHTML = '';
+
+      for (const m of msgs) {
+        let text;
+        if (m.ciphertext) {
+          text = await decryptText(key, m.ciphertext, m.iv);
+        } else {
+          text = m.text || '';
+        }
+
+        const row = document.createElement('div');
+        if (m.system) {
+          row.className = 'msg-row system';
+          row.innerHTML = `<div class="msg-bubble">${esc(text)}</div>`;
+        } else {
+          const mine = m.sender === me.name;
+          row.className = 'msg-row ' + (mine ? 'mine' : 'theirs');
+          row.innerHTML = `
+            ${mine ? '' : `<div class="msg-sender">${esc(m.sender)}</div>`}
+            <div class="msg-bubble">${esc(text)}</div>
+            <div class="msg-time">${fmtTime(m.ts)}</div>`;
+        }
+        container.appendChild(row);
+      }
+
+      // Scroll handling
+      if (wasAtBottom || msgs.length <= 2) {
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // Update sidebar preview
+      if (msgs.length > 0) {
+        const lm = msgs[msgs.length - 1];
+        const lastEl = document.getElementById(`last-${code}`);
+        if (lastEl) {
+          const lastKey = circleKeys[code];
+          if (lastKey && lm.ciphertext) {
+            decryptText(lastKey, lm.ciphertext, lm.iv).then(t => {
+              lastEl.textContent = lm.system ? t : `${lm.sender}: ${t}`;
+            });
+          }
+        }
+      }
+
+      // Update online count
+      checkOnline(code);
+    });
+  }
+
+  function stopListening() {
+    if (activeListenerRef && activeListener) {
+      activeListenerRef.off('value', activeListener);
+    }
+    activeListenerRef = null;
+    activeListener = null;
+  }
+
+  // ================================================================
+  // SEND MESSAGE
+  // ================================================================
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !activeCode || !me) return;
+    const key = circleKeys[activeCode];
+    if (!key) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    try {
+      const { ciphertext, iv } = await encryptText(key, text);
+      await db.ref(`circles/${activeCode}/messages`).push({
+        sender: me.name,
+        ciphertext,
+        iv,
+        ts: Date.now()
+      });
+    } catch (e) {
+      console.error('Send error:', e);
+    }
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  const msgInput = document.getElementById('msgInput');
+  msgInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  msgInput.addEventListener('input', () => {
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+  });
+
+  // ================================================================
+  // HEADER BUTTONS — Copy code & Invite link
+  // ================================================================
+  document.getElementById('headCode').addEventListener('click', function () {
+    const code = this.getAttribute('data-code') || activeCode;
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      const old = this.innerHTML;
+      this.innerHTML = '✓ <span>Copied!</span>';
+      setTimeout(() => this.innerHTML = old, 1600);
+    }).catch(() => prompt('Copy this code:', code));
+  });
+
+  document.getElementById('inviteBtn').addEventListener('click', function () {
+    if (!activeCode) return;
+    const url = `${location.origin}${location.pathname}#join=${encodeURIComponent(activeCode)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const old = this.innerHTML;
+      this.innerHTML = '✓ <span>Link copied!</span>';
+      setTimeout(() => this.innerHTML = old, 1800);
+    }).catch(() => prompt('Share this invite link:', url));
+  });
+
+  // ================================================================
+  // NAVIGATION — Add circle, logout, menu
+  // ================================================================
+  document.getElementById('addCircleBtn').addEventListener('click', () => {
+    stopListening();
+    show('authScreen');
+    document.getElementById('joinName').value = me ? me.name : '';
+    document.getElementById('createName').value = me ? me.name : '';
+    applyInviteHash(); // re-check in case user navigated here via link
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    stopListening();
+    if (presenceTimer) clearInterval(presenceTimer);
+    me = null; activeCode = null; myCircles = []; circleKeys = {};
+    sessionStorage.removeItem('circles_mine');
+    show('authScreen');
+    document.getElementById('joinName').value = '';
+    document.getElementById('createName').value = '';
+  });
+
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  // Close sidebar when tapping outside on mobile
+  document.getElementById('chatPanel').addEventListener('click', () => {
+    if (window.innerWidth <= 720) {
+      document.getElementById('sidebar').classList.remove('open');
+    }
+  });
+
+  // ================================================================
+  // PRESENCE (lightweight online indicator)
+  // ================================================================
+  function startPresenceLoop() {
+    heartbeat();
+    presenceTimer = setInterval(heartbeat, 8000);
+  }
+
+  async function heartbeat() {
+    if (!me || !myCircles.length || !db) return;
+    for (const c of myCircles) {
+      if (!circleKeys[c.code]) continue; // only mark presence for joined circles
+      try {
+        const presRef = db.ref(`circles/${c.code}/presence/${safeKey(me.name)}`);
+        await presRef.set({ name: me.name, ts: Date.now() });
+        presRef.onDisconnect().remove(); // auto-remove when tab closes
+      } catch { /* ignore presence errors */ }
+    }
+
+    if (activeCode) {
+      const dot = document.getElementById(`dot-${activeCode}`);
+      if (dot) dot.classList.add('on');
+      checkOnline(activeCode);
+    }
+  }
+
+  async function checkOnline(code) {
+    if (!db) return;
+    try {
+      const snap = await db.ref(`circles/${code}/presence`).get();
+      if (!snap.exists()) return;
+      const now = Date.now();
+      let count = 0;
+      snap.forEach(child => { if (now - child.val().ts < 20000) count++; });
+      const subEl = document.getElementById('headSub');
+      if (subEl && count > 0) {
+        subEl.innerHTML = `<span class="e2e-pill" style="font-size:9px;padding:2px 7px;">E2E</span>
+          <span class="online-count">● ${count} online</span>`;
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ================================================================
+  // HELPERS
+  // ================================================================
+  function showErr(el, msg) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function setLoading(btn, loading, resetText) {
+    btn.disabled = loading;
+    if (loading) {
+      btn.innerHTML = '<span class="spinner"></span>';
+    } else if (resetText) {
+      btn.textContent = resetText;
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
