@@ -62,6 +62,38 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 
+/* Disable text selection on UI elements to prevent copy overlay on mobile */
+.brand,
+.auth-tab,
+.btn,
+.me-row,
+.icon-btn,
+.chats-section-label,
+.chat-item,
+.chat-avatar,
+.chat-preview-name,
+.chat-preview-time,
+.add-friend-btn,
+.chat-head,
+.back-btn,
+.paint-fab,
+.date-divider,
+.msg-sender-label,
+.msg-meta,
+.send-btn,
+.close-x,
+.brush-shape-btn,
+.tool-btn,
+.palette-label,
+.bg-swatch,
+.color-dot,
+.custom-color-btn,
+.canvas-bg-row label,
+.size-row label {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 body {
   font-family: var(--font-body);
   background:
