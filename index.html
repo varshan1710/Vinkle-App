@@ -1064,6 +1064,19 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 </div>
 
 <!-- ════════════════════════════════════════
+     DELETE MESSAGE MODAL
+════════════════════════════════════════ -->
+<div id="deleteMsgModal" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:320px; text-align:center;">
+    <div class="modal-title">Delete Message?</div>
+    <div class="modal-sub">Choose how you want to delete this message.</div>
+    <button class="btn" id="deleteForMeBtn" style="margin-top:16px; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">Delete for Me 👤</button>
+    <button class="btn" id="deleteForEveryoneBtn" style="margin-top:10px; background:var(--red); color:#fff; box-shadow:none;">Delete for Everyone 👥</button>
+    <button class="btn" id="deleteCancelBtn" style="margin-top:10px; background:transparent; border:none; color:var(--muted); box-shadow:none;">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      LIGHTBOX
 ════════════════════════════════════════ -->
 <div id="lightboxModal" class="lightbox-overlay hidden">
@@ -1477,7 +1490,21 @@ const FIREBASE_CONFIG = {
       const container = document.getElementById('messages');
       const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
-      const msgs = snap.val() ? Object.values(snap.val()).sort((a,b)=>a.ts-b.ts) : [];
+      const key = `deleted_msgs_${me.username}`;
+      let deleted = [];
+      try {
+        deleted = JSON.parse(localStorage.getItem(key)) || [];
+      } catch(e) {}
+
+      const msgs = [];
+      if (snap.val()) {
+        Object.entries(snap.val()).forEach(([id, val]) => {
+          if (!deleted.includes(id)) {
+            msgs.push({ id, ...val });
+          }
+        });
+      }
+      msgs.sort((a,b)=>a.ts-b.ts);
       container.innerHTML = '';
 
       let lastDate=null, prevSender=null, prevTs=0;
@@ -1517,8 +1544,29 @@ const FIREBASE_CONFIG = {
           }
           const bubble = document.createElement('div');
           bubble.className='msg-bubble';
+          bubble.dataset.msgid = m.id;
+          bubble.dataset.sender = m.sender;
           bubble.innerHTML=`${body}<div class="msg-meta"><span>${fmtTime(m.ts)}</span>${mine?'<span class="msg-tick">✓✓</span>':''}</div>`;
           row.appendChild(bubble);
+
+          // Long press gesture detection
+          let pressTimer = null;
+          const startPress = (e) => {
+            if (m.system) return;
+            pressTimer = setTimeout(() => {
+              showDeleteMenu(m.id, m.sender);
+            }, 600);
+          };
+          const endPress = () => {
+            if (pressTimer) clearTimeout(pressTimer);
+          };
+
+          bubble.addEventListener('mousedown', startPress);
+          bubble.addEventListener('mouseup', endPress);
+          bubble.addEventListener('mouseleave', endPress);
+          bubble.addEventListener('touchstart', startPress, {passive: true});
+          bubble.addEventListener('touchend', endPress, {passive: true});
+          bubble.addEventListener('touchmove', endPress, {passive: true});
         }
         container.appendChild(row);
       }
@@ -1952,6 +2000,59 @@ const FIREBASE_CONFIG = {
       await db.ref(`chats/${activeChat.chatId}/messages`).remove();
     } catch(e) {
       console.error(e);
+    }
+  });
+
+  // ================================================================
+  // DELETE INDIVIDUAL MESSAGE
+  // ================================================================
+  let selectedMsgId = null;
+  let selectedMsgSender = null;
+
+  function showDeleteMenu(msgId, sender) {
+    selectedMsgId = msgId;
+    selectedMsgSender = sender;
+    document.getElementById('deleteMsgModal').classList.remove('hidden');
+    // Only show "Delete for Everyone" if it's sent by me
+    const isMine = sender === me.username;
+    document.getElementById('deleteForEveryoneBtn').classList.toggle('hidden', !isMine);
+  }
+
+  document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+    document.getElementById('deleteMsgModal').classList.add('hidden');
+  });
+  document.getElementById('deleteMsgModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('deleteMsgModal'))
+      document.getElementById('deleteMsgModal').classList.add('hidden');
+  });
+
+  document.getElementById('deleteForMeBtn').addEventListener('click', () => {
+    if (!selectedMsgId) return;
+    const key = `deleted_msgs_${me.username}`;
+    let deleted = [];
+    try {
+      deleted = JSON.parse(localStorage.getItem(key)) || [];
+    } catch(e) {}
+    if (!deleted.includes(selectedMsgId)) {
+      deleted.push(selectedMsgId);
+      localStorage.setItem(key, JSON.stringify(deleted));
+    }
+    document.getElementById('deleteMsgModal').classList.add('hidden');
+    const bubble = document.querySelector(`.msg-bubble[data-msgid="${selectedMsgId}"]`);
+    if (bubble) {
+      const row = bubble.closest('.msg-row');
+      if (row) row.style.display = 'none';
+    }
+  });
+
+  document.getElementById('deleteForEveryoneBtn').addEventListener('click', async () => {
+    if (!selectedMsgId || !activeChat) return;
+    const { chatId } = activeChat;
+    document.getElementById('deleteMsgModal').classList.add('hidden');
+    try {
+      await db.ref(`chats/${chatId}/messages/${selectedMsgId}`).remove();
+    } catch(e) {
+      console.error("Failed to delete for everyone", e);
     }
   });
 
