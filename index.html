@@ -414,6 +414,14 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   margin-top: 2px; font-weight: 600;
 }
 .chat-preview-time { font-size: 10.5px; color: var(--muted); flex-shrink: 0; align-self: flex-start; padding-top: 2px; font-weight: 700; }
+.chat-preview-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.chat-unread-badge {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  background: #25D366; color: #fff; font-size: 11.5px; font-weight: 800;
+  display: none; align-items: center; justify-content: center; line-height: 1;
+  font-family: var(--font-display);
+}
+.chat-unread-badge.show { display: flex; }
 
 .sidebar-footer {
   padding: 12px 12px 16px;
@@ -1331,6 +1339,51 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 }
 .bd-left-banner .bd-left-sub { font-size: 13px; color: var(--muted); font-weight: 600; max-width: 280px; }
 
+/* ================================================================
+   COIN TOSS OVERLAY (Bomb Duel + XO fair-start)
+================================================================ */
+.coin-toss-overlay {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; text-align: center; padding: 20px;
+  background: rgba(12,11,29,0.96); backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl); animation: fadeIn 0.3s ease;
+}
+.coin-toss-overlay.hidden { display: none; }
+.coin-toss-title {
+  font-family: var(--font-display); font-size: 18px; color: var(--text);
+}
+.coin-toss-stage { perspective: 700px; width: 96px; height: 96px; }
+.coin-toss-coin {
+  width: 96px; height: 96px; border-radius: 50%; position: relative;
+  transform-style: preserve-3d;
+  background: linear-gradient(135deg, #FFD23F, #FF8C42);
+  box-shadow: 0 6px 24px rgba(255,180,60,0.45);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 15px; color: #3a2a00;
+}
+.coin-toss-coin.flipping { animation: coinFlip 1.4s cubic-bezier(0.45,0.05,0.55,0.95) forwards; }
+@keyframes coinFlip {
+  0%   { transform: rotateY(0deg) translateY(0); }
+  40%  { transform: rotateY(900deg) translateY(-60px); }
+  70%  { transform: rotateY(1620deg) translateY(0); }
+  100% { transform: rotateY(1800deg) translateY(0); }
+}
+.coin-toss-result {
+  font-family: var(--font-display); font-size: 22px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  opacity: 0; transform: translateY(6px);
+  transition: all 0.35s ease;
+}
+.coin-toss-result.show { opacity: 1; transform: translateY(0); }
+.coin-toss-sub { font-size: 14px; color: var(--text); font-weight: 700; opacity: 0; transition: opacity 0.35s ease 0.15s; }
+.coin-toss-sub.show { opacity: 1; }
+.coin-toss-call-actions { display: flex; gap: 10px; }
+.coin-toss-call-actions.hidden { display: none; }
+.coin-call-btn { width: auto; padding: 11px 22px; margin: 0; font-size: 14px; }
+.coin-call-btn:disabled { opacity: 0.5; cursor: default; }
+
 </style>
 </head>
 <body>
@@ -1652,6 +1705,16 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="xoLeftExitBtn">Exit</button>
       </div>
     </div>
+    <div class="coin-toss-overlay hidden" id="xoCoinTossOverlay">
+      <div class="coin-toss-title" id="xoCoinTossTitle">Flipping a coin to decide who starts…</div>
+      <div class="coin-toss-call-actions hidden" id="xoCoinCallActions">
+        <button class="btn coin-call-btn" id="xoCallHeadsBtn">🪙 Heads</button>
+        <button class="btn coin-call-btn" id="xoCallTailsBtn">🌕 Tails</button>
+      </div>
+      <div class="coin-toss-stage"><div class="coin-toss-coin" id="xoCoinTossCoin">🪙</div></div>
+      <div class="coin-toss-result" id="xoCoinTossResult"></div>
+      <div class="coin-toss-sub" id="xoCoinTossSub"></div>
+    </div>
   </div>
 </div>
 
@@ -1709,6 +1772,16 @@ input::placeholder { color: #3A3870; font-weight: 600; }
       <div class="bd-winner-actions" style="margin-top:6px;">
         <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="bdLeftExitBtn">Exit</button>
       </div>
+    </div>
+    <div class="coin-toss-overlay hidden" id="bdCoinTossOverlay">
+      <div class="coin-toss-title" id="bdCoinTossTitle">Flipping a coin to decide who starts…</div>
+      <div class="coin-toss-call-actions hidden" id="bdCoinCallActions">
+        <button class="btn coin-call-btn" id="bdCallHeadsBtn">🪙 Heads</button>
+        <button class="btn coin-call-btn" id="bdCallTailsBtn">🌕 Tails</button>
+      </div>
+      <div class="coin-toss-stage"><div class="coin-toss-coin" id="bdCoinTossCoin">🪙</div></div>
+      <div class="coin-toss-result" id="bdCoinTossResult"></div>
+      <div class="coin-toss-sub" id="bdCoinTossSub"></div>
     </div>
   </div>
 </div>
@@ -2039,13 +2112,67 @@ const FIREBASE_CONFIG = {
 
       container.innerHTML = '';
       if (!chats.length) {
+        Object.keys(unreadListeners).forEach(clearUnreadListener);
         container.innerHTML = `<div style="text-align:center;padding:36px 16px;color:var(--muted);font-size:14px;line-height:1.8;font-weight:600">
           No vinkles yet! 🌟<br>Tap <strong style="color:var(--text)">✨ Add a Friend</strong><br>to start chatting!
         </div>`;
         return;
       }
+      const currentIds = new Set(chats.map(c => c.chatId));
+      Object.keys(unreadListeners).forEach(id => { if (!currentIds.has(id)) clearUnreadListener(id); });
       chats.forEach(c => container.appendChild(buildChatItem(c)));
     });
+  }
+
+  // Keep track of unread-count listeners so we don't stack duplicates every
+  // time the chat list re-renders (e.g. on a new message or reorder).
+  let unreadListeners = {}; // chatId -> {msgsRef, msgsFn, readRef, readFn}
+
+  function clearUnreadListener(chatId) {
+    const l = unreadListeners[chatId];
+    if (!l) return;
+    if (l.msgsRef && l.msgsFn) l.msgsRef.off('value', l.msgsFn);
+    if (l.readRef && l.readFn) l.readRef.off('value', l.readFn);
+    delete unreadListeners[chatId];
+  }
+
+  // WhatsApp-style unread badge: recompute whenever either new messages
+  // arrive in the chat, or our own lastRead timestamp changes (e.g. because
+  // we opened the chat, which should clear the badge immediately).
+  function watchUnreadCount(chatId, friendUsername) {
+    clearUnreadListener(chatId);
+    const badge = () => document.querySelector(`.chat-item[data-chatid="${chatId}"] .chat-unread-badge`);
+    let myLastRead = 0;
+    const recompute = async () => {
+      const el = badge();
+      if (!el) return;
+      try {
+        const msnap = await db.ref(`chats/${chatId}/messages`).get();
+        let count = 0;
+        if (msnap.exists()) {
+          Object.values(msnap.val()).forEach(m => {
+            if (m.sender && m.sender !== me.username && m.ts > myLastRead) count++;
+          });
+        }
+        // Don't badge a chat that's currently open on screen.
+        const isOpenNow = activeChat && activeChat.chatId === chatId;
+        if (count > 0 && !isOpenNow) {
+          el.textContent = count > 99 ? '99+' : String(count);
+          el.classList.add('show');
+        } else {
+          el.textContent = '';
+          el.classList.remove('show');
+        }
+      } catch(e) {}
+    };
+    const readRef = db.ref(`lastRead/${chatId}/${me.username}`);
+    const readFn = readRef.on('value', snap => {
+      myLastRead = (snap.val() && snap.val().ts) || 0;
+      recompute();
+    });
+    const msgsRef = db.ref(`chats/${chatId}/messages`);
+    const msgsFn = msgsRef.on('value', () => recompute());
+    unreadListeners[chatId] = { msgsRef, msgsFn, readRef, readFn };
   }
 
   function buildChatItem({ chatId, friendUsername, friendDisplay, lastText, lastTs }) {
@@ -2061,12 +2188,17 @@ const FIREBASE_CONFIG = {
         <div class="chat-preview-name">${esc(friendDisplay)}</div>
         <div class="chat-preview-msg">${esc(lastText||'Start a vinkle… 💬')}</div>
       </div>
-      <div class="chat-preview-time">${fmtSidebarTime(lastTs)}</div>
+      <div class="chat-preview-side">
+        <div class="chat-preview-time">${fmtSidebarTime(lastTs)}</div>
+        <span class="chat-unread-badge"></span>
+      </div>
     `;
     div.addEventListener('click', () => openChat(chatId, friendUsername, friendDisplay));
     listenPresence(friendUsername);
+    watchUnreadCount(chatId, friendUsername);
     return div;
   }
+
 
   function listenPresence(username) {
     db.ref(`presence/${username}`).on('value', snap => {
@@ -3209,6 +3341,7 @@ const FIREBASE_CONFIG = {
   let xoPresenceRefs=[];
   let xoOpponentLeftShown=false;
   let xoLastMoveCount=0;
+  let xoCoinTossShown=false;
 
   function xoGenId() { return 'xo_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
 
@@ -3217,7 +3350,8 @@ const FIREBASE_CONFIG = {
     xoGameId = xoGenId();
     const chatId = activeChat.chatId;
     xoOpponentDisplay = activeChat.friendDisplay;
-    // Creator starts as X for match 1; startingSymbol alternates each rematch.
+    // Creator starts as X for match 1; who actually goes first is decided
+    // fairly by a coin toss once the opponent joins (see xoBeginCoinToss).
     const gameData = {
       createdBy: me.username, chatId,
       players: { X: me.username, O: '' },
@@ -3257,7 +3391,7 @@ const FIREBASE_CONFIG = {
     const freshData = freshSnap.val();
     const opUser = freshData.players.X===me.username ? freshData.players.O : freshData.players.X;
     xoOpponentDisplay = (freshData.playerNames && freshData.playerNames[opUser]) || opUser;
-    if (freshData.phase==='waiting_opponent' && freshData.players.O) await xoGameRef.child('phase').set('playing');
+    if (freshData.phase==='waiting_opponent' && freshData.players.O) await xoBeginCoinToss(xoGameRef);
     await xoGameRef.child(`connected/${me.username}`).set(true);
     xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
     xoOpenModal();
@@ -3271,7 +3405,9 @@ const FIREBASE_CONFIG = {
     document.getElementById('xoWinnerOverlay').classList.add('hidden');
     document.getElementById('xoLeftBanner').classList.add('hidden');
     xoOpponentLeftShown = false;
-    xoPhase='waiting'; xoLastMoveCount=0;
+    xoPhase='waiting'; xoLastMoveCount=0; xoCoinTossShown=false;
+    document.getElementById('xoCoinTossOverlay').classList.add('hidden');
+    document.getElementById('xoCoinCallActions').classList.add('hidden');
     document.getElementById('xoMyLabel').textContent = `✕ ${me.displayName}`;
     document.getElementById('xoOpLabel').textContent = `○ ${xoOpponentDisplay || 'Waiting...'}`;
     xoRenderBoard(Array(9).fill(''), true);
@@ -3312,6 +3448,104 @@ const FIREBASE_CONFIG = {
     document.getElementById('xoWinnerOverlay').classList.add('hidden');
   }
 
+  // Fair-start coin toss: whichever client notices the opponent has joined
+  // races to move the game into 'coin_call' via a transaction (so only one
+  // write wins). In that phase the room creator calls Heads or Tails; once
+  // they call, we flip an actual random result and compare it to their call
+  // — call matches => caller starts, call misses => the other player starts.
+  async function xoBeginCoinToss(gameRef) {
+    await gameRef.child('phase').transaction(current => {
+      if (current !== 'waiting_opponent') return; // already advanced — abort
+      return 'coin_call';
+    });
+  }
+
+  async function xoSubmitCoinCall(call) {
+    if (!xoGameRef) return;
+    const snap = await xoGameRef.get();
+    const data = snap.val();
+    if (!data || data.phase !== 'coin_call' || data.coinCall) return;
+    if (data.createdBy !== me.username) return; // only the creator calls
+    await xoGameRef.child('coinCall').transaction(current => {
+      if (current) return; // already called — abort
+      return call; // 'Heads' or 'Tails'
+    });
+    // Flip a genuinely random result *after* the call is locked in, then
+    // compare to decide the starter, and move into the toss/reveal phase.
+    const freshSnap = await xoGameRef.get();
+    const freshData = freshSnap.val();
+    if (freshData.coinToss) return;
+    const players = [freshData.players.X, freshData.players.O];
+    const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+    const caller = freshData.createdBy;
+    const other = players.find(p => p !== caller);
+    const starter = (result === freshData.coinCall) ? caller : other;
+    await xoGameRef.child('phase').transaction(current => {
+      if (current !== 'coin_call') return;
+      return 'coin_toss';
+    });
+    await xoGameRef.child('coinToss').transaction(current => {
+      if (current) return;
+      return { result, starter, call: freshData.coinCall, ts: Date.now() };
+    });
+  }
+
+  function xoShowCoinCallUI(data) {
+    const overlay = document.getElementById('xoCoinTossOverlay');
+    const title = document.getElementById('xoCoinTossTitle');
+    const callActions = document.getElementById('xoCoinCallActions');
+    overlay.classList.remove('hidden');
+    document.getElementById('xoCoinTossResult').classList.remove('show');
+    document.getElementById('xoCoinTossResult').textContent = '';
+    document.getElementById('xoCoinTossSub').classList.remove('show');
+    const amCreator = data.createdBy === me.username;
+    if (amCreator) {
+      title.textContent = 'Call it! Heads or Tails?';
+      callActions.classList.remove('hidden');
+    } else {
+      const creatorName = data.playerNames?.[data.createdBy] || data.createdBy;
+      title.textContent = `Waiting for ${creatorName} to call heads or tails...`;
+      callActions.classList.add('hidden');
+    }
+  }
+
+  function xoRunCoinTossAnimation(data) {
+    if (xoCoinTossShown) return;
+    xoCoinTossShown = true;
+    const overlay = document.getElementById('xoCoinTossOverlay');
+    const title = document.getElementById('xoCoinTossTitle');
+    const coin = document.getElementById('xoCoinTossCoin');
+    const resultEl = document.getElementById('xoCoinTossResult');
+    const subEl = document.getElementById('xoCoinTossSub');
+    document.getElementById('xoCoinCallActions').classList.add('hidden');
+    overlay.classList.remove('hidden');
+    title.textContent = 'Flipping the coin...';
+    coin.classList.remove('flipping');
+    resultEl.classList.remove('show'); resultEl.textContent = '';
+    subEl.classList.remove('show'); subEl.textContent = '';
+    // Force reflow so the animation restarts cleanly.
+    void coin.offsetWidth;
+    coin.classList.add('flipping');
+    setTimeout(() => {
+      const { result, starter } = data.coinToss;
+      const starterName = data.playerNames?.[starter] || starter;
+      const isMe = starter === me.username;
+      coin.textContent = result === 'Heads' ? '🪙' : '🌕';
+      resultEl.textContent = result;
+      resultEl.classList.add('show');
+      subEl.textContent = `${isMe ? 'You' : starterName} starts first.`;
+      subEl.classList.add('show');
+      setTimeout(async () => {
+        overlay.classList.add('hidden');
+        // The player who won the toss (and only them) advances the game to
+        // 'playing' so we don't get two clients racing to flip it.
+        if (isMe && xoGameRef) {
+          await xoGameRef.update({ turn: starter, phase: 'playing' });
+        }
+      }, 1600);
+    }, 1450);
+  }
+
   function xoOnGameUpdate(data) {
     if (!data) return;
     const myU = me.username;
@@ -3344,6 +3578,16 @@ const FIREBASE_CONFIG = {
       xoUpdateStatus('Waiting for opponent to join...', '');
       document.getElementById('xoActions').innerHTML = `<button class="btn" disabled>⏳ Waiting...</button>`;
       xoRenderBoard(data.board || Array(9).fill(''), true);
+    } else if (phase==='coin_call') {
+      xoUpdateStatus('Waiting for the coin call...', '');
+      document.getElementById('xoActions').innerHTML = '';
+      xoRenderBoard(data.board || Array(9).fill(''), true);
+      xoShowCoinCallUI(data);
+    } else if (phase==='coin_toss') {
+      xoUpdateStatus('Tossing a coin to decide who starts...', '');
+      document.getElementById('xoActions').innerHTML = '';
+      xoRenderBoard(data.board || Array(9).fill(''), true);
+      if (data.coinToss) xoRunCoinTossAnimation(data);
     } else if (phase==='playing') {
       const myName = me.displayName;
       const turnName = isMyTurn ? myName : (xoOpponentDisplay || 'Opponent');
@@ -3468,12 +3712,10 @@ const FIREBASE_CONFIG = {
     const data = snap.val(); if (!data) return;
     if (data.rematchGameId) { xoFollowRematch(data.chatId || activeChat.chatId, data.rematchGameId); return; }
     const newMatchCount = (data.matchCount||1)+1;
-    const newStartSymbol = data.startingSymbol==='X' ? 'O' : 'X';
-    // Swap X/O between the two players each rematch, so whoever was O last
-    // time is X this time (and vice versa) — the starting symbol alternates too.
+    // Swap X/O between the two players each rematch (cosmetic only — who
+    // actually moves first is decided fresh by the coin call/toss below).
     const oldX = data.players.X, oldO = data.players.O;
     const swappedPlayers = { X: oldO, O: oldX };
-    const startingUser = swappedPlayers[newStartSymbol];
     const newId = xoGenId();
     const chatId = data.chatId || activeChat.chatId;
     const newGame = {
@@ -3481,10 +3723,10 @@ const FIREBASE_CONFIG = {
       players: swappedPlayers,
       playerNames: data.playerNames||{},
       board: Array(9).fill(''),
-      moves: [], turn: startingUser,
-      phase: 'playing', winner: null, draw: false,
+      moves: [], turn: '',
+      phase: 'coin_call', winner: null, draw: false,
       scores: data.scores || {X:0,O:0,draw:0},
-      matchCount: newMatchCount, startingSymbol: newStartSymbol, ts: Date.now(),
+      matchCount: newMatchCount, ts: Date.now(),
       connected: { [me.username]: true }
     };
     const oldGameRef = xoGameRef;
@@ -3502,7 +3744,7 @@ const FIREBASE_CONFIG = {
     xoGameRef = db.ref(`xoGame/${chatId}/${newId}`);
     xoGameRef.child(`connected/${me.username}`).set(true);
     xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
-    xoLastMoveCount = 0;
+    xoLastMoveCount = 0; xoCoinTossShown = false;
     xoOpenModal();
     xoStartListening(chatId, newId);
   }
@@ -3537,6 +3779,8 @@ const FIREBASE_CONFIG = {
     if (e.target.id==='xoExitBtn'    || e.target.closest?.('#xoExitBtn'))    xoCleanup(false);
   });
   document.getElementById('xoLeftExitBtn').addEventListener('click', () => xoCleanup(false));
+  document.getElementById('xoCallHeadsBtn').addEventListener('click', () => xoSubmitCoinCall('Heads'));
+  document.getElementById('xoCallTailsBtn').addEventListener('click', () => xoSubmitCoinCall('Tails'));
 
   window.addEventListener('beforeunload', () => {
     if (xoGameRef && xoPhase!=='idle') {
@@ -3571,6 +3815,7 @@ const FIREBASE_CONFIG = {
   let bdLastMoveCount=0;
   let bdPresenceRefs=[]; // {ref, fn} pairs for opponent-presence listeners during a match
   let bdOpponentLeftShown=false;
+  let bdCoinTossShown=false;
 
   function bdGenId() { return 'bd_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
 
@@ -3637,7 +3882,9 @@ const FIREBASE_CONFIG = {
     document.getElementById('bdWinnerOverlay').classList.add('hidden');
     document.getElementById('bdLeftBanner').classList.add('hidden');
     bdOpponentLeftShown = false;
-    bdMyBombs=[]; bdPhase='placing'; bdLastMoveCount=0;
+    bdMyBombs=[]; bdPhase='placing'; bdLastMoveCount=0; bdCoinTossShown=false;
+    document.getElementById('bdCoinTossOverlay').classList.add('hidden');
+    document.getElementById('bdCoinCallActions').classList.add('hidden');
     bdRenderMyGrid(); bdRenderOpGrid_Disabled(); bdUpdateUI_Placing();
     document.getElementById('bdMyName').textContent = me.displayName;
     document.getElementById('bdOpName').textContent = bdOpponentDisplay || 'Waiting...';
@@ -3681,6 +3928,89 @@ const FIREBASE_CONFIG = {
     document.getElementById('bdLeftText').textContent = `${bdOpponentDisplay || 'Opponent'} left the duel`;
     document.getElementById('bdLeftBanner').classList.remove('hidden');
     document.getElementById('bdWinnerOverlay').classList.add('hidden');
+  }
+
+  async function bdSubmitCoinCall(call) {
+    if (!bdGameRef) return;
+    const snap = await bdGameRef.get();
+    const data = snap.val();
+    if (!data || data.phase !== 'coin_call' || data.coinCall) return;
+    if (data.createdBy !== me.username) return; // only the creator calls
+    await bdGameRef.child('coinCall').transaction(current => {
+      if (current) return; // already called — abort
+      return call; // 'Heads' or 'Tails'
+    });
+    const freshSnap = await bdGameRef.get();
+    const freshData = freshSnap.val();
+    if (freshData.coinToss) return;
+    const players = [freshData.players.player1, freshData.players.player2];
+    const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+    const caller = freshData.createdBy;
+    const other = players.find(p => p !== caller);
+    const starter = (result === freshData.coinCall) ? caller : other;
+    await bdGameRef.child('phase').transaction(current => {
+      if (current !== 'coin_call') return;
+      return 'coin_toss';
+    });
+    await bdGameRef.child('coinToss').transaction(current => {
+      if (current) return;
+      return { result, starter, call: freshData.coinCall, ts: Date.now() };
+    });
+  }
+
+  function bdShowCoinCallUI(data) {
+    const overlay = document.getElementById('bdCoinTossOverlay');
+    const title = document.getElementById('bdCoinTossTitle');
+    const callActions = document.getElementById('bdCoinCallActions');
+    overlay.classList.remove('hidden');
+    document.getElementById('bdCoinTossResult').classList.remove('show');
+    document.getElementById('bdCoinTossResult').textContent = '';
+    document.getElementById('bdCoinTossSub').classList.remove('show');
+    const amCreator = data.createdBy === me.username;
+    if (amCreator) {
+      title.textContent = 'Call it! Heads or Tails?';
+      callActions.classList.remove('hidden');
+    } else {
+      const creatorName = data.playerNames?.[data.createdBy] || data.createdBy;
+      title.textContent = `Waiting for ${creatorName} to call heads or tails...`;
+      callActions.classList.add('hidden');
+    }
+  }
+
+  function bdRunCoinTossAnimation(data) {
+    if (bdCoinTossShown) return;
+    bdCoinTossShown = true;
+    const overlay = document.getElementById('bdCoinTossOverlay');
+    const title = document.getElementById('bdCoinTossTitle');
+    const coin = document.getElementById('bdCoinTossCoin');
+    const resultEl = document.getElementById('bdCoinTossResult');
+    const subEl = document.getElementById('bdCoinTossSub');
+    document.getElementById('bdCoinCallActions').classList.add('hidden');
+    overlay.classList.remove('hidden');
+    title.textContent = 'Flipping the coin...';
+    coin.classList.remove('flipping');
+    resultEl.classList.remove('show'); resultEl.textContent = '';
+    subEl.classList.remove('show'); subEl.textContent = '';
+    void coin.offsetWidth;
+    coin.classList.add('flipping');
+    setTimeout(() => {
+      const { result, starter } = data.coinToss;
+      const starterName = data.playerNames?.[starter] || starter;
+      const isMe = starter === me.username;
+      coin.textContent = result === 'Heads' ? '🪙' : '🌕';
+      resultEl.textContent = result;
+      resultEl.classList.add('show');
+      subEl.textContent = `${isMe ? 'You' : starterName} starts first.`;
+      subEl.classList.add('show');
+      setTimeout(async () => {
+        overlay.classList.add('hidden');
+        // Only the coin-toss winner flips the game to 'playing', avoiding a
+        // race where both clients try to advance the phase simultaneously.
+        if (isMe && bdGameRef) {
+          await bdGameRef.update({ turn: starter, phase: 'playing' });
+        }
+      }, 1600);
+    }, 1450);
   }
 
   function bdOnGameUpdate(data) {
@@ -3733,6 +4063,16 @@ const FIREBASE_CONFIG = {
         document.getElementById('bdReadyBtn')?.addEventListener('click', bdReady);
       }
       bdRenderMyGrid(); bdRenderOpGrid_Disabled();
+    } else if (phase==='coin_call') {
+      bdUpdateStatus('Waiting for the coin call...', '');
+      document.getElementById('bdActions').innerHTML = '';
+      bdRenderMyGrid(); bdRenderOpGrid_Disabled();
+      bdShowCoinCallUI(data);
+    } else if (phase==='coin_toss') {
+      bdUpdateStatus('Tossing a coin to decide who starts...', '');
+      document.getElementById('bdActions').innerHTML = '';
+      bdRenderMyGrid(); bdRenderOpGrid_Disabled();
+      if (data.coinToss) bdRunCoinTossAnimation(data);
     } else if (phase==='playing') {
       document.getElementById('bdPlacingHint').classList.add('hidden');
       bdUpdateStatus(isMyTurn ? '🎯 Your turn — tap opponent grid!' : '⏳ Opponent choosing...', isMyTurn ? 'your-turn' : '');
@@ -3749,8 +4089,12 @@ const FIREBASE_CONFIG = {
       }
       document.getElementById('bdPlacingHint').classList.add('hidden');
       document.getElementById('bdLeftBanner').classList.add('hidden');
-      const winnerName = data.playerNames?.[data.winner] || data.winner;
-      bdShowVictory(winnerName, data.winner===myU);
+      if (data.draw) {
+        bdShowVictory(null, false, true);
+      } else {
+        const winnerName = data.playerNames?.[data.winner] || data.winner;
+        bdShowVictory(winnerName, data.winner===myU, false);
+      }
       document.getElementById('bdActions').innerHTML = '';
       bdRenderMyGrid_Playing(data, myU);
       bdRenderOpGrid_Playing(data, myU, opU, false);
@@ -3857,19 +4201,25 @@ const FIREBASE_CONFIG = {
     const snap = await bdGameRef.get();
     const data = snap.val();
     if (data.ready.player1 && data.ready.player2 && data.phase==='placing') {
-      const startU = data.players[data.startingPlayer||'player1'];
+      // Both players are ready — hand off to a fair coin call/toss to decide
+      // who actually gets the first turn, instead of always favoring player1.
       await bdGameRef.child('phase').transaction(current => {
         if (current !== 'placing') return; // someone else already flipped it — abort
-        return 'playing';
+        return 'coin_call';
       });
       await bdGameRef.update({
-        turn: startU,
         [`lives/${data.players.player1}`]: 3,
-        [`lives/${data.players.player2}`]: 3
+        [`lives/${data.players.player2}`]: 3,
+        [`turnsTaken/${data.players.player1}`]: 0,
+        [`turnsTaken/${data.players.player2}`]: 0
       });
     }
   }
 
+  // Fairness rule: a player losing their last life on their turn does not
+  // instantly end the match — the other player still gets to take their turn
+  // first, so both players always end up having taken the same number of
+  // turns before a winner (or draw) is declared.
   async function bdAttack(cellIdx, opU) {
     if (!bdGameRef || bdPhase!=='playing') return;
     const snap = await bdGameRef.get();
@@ -3881,14 +4231,31 @@ const FIREBASE_CONFIG = {
     const isBomb = opBombs.includes(cellIdx);
     const result = isBomb ? 'bomb' : 'safe';
     const moveIdx = (data.moves||[]).length;
+    const myTurnsTaken = (data.turnsTaken?.[me.username] || 0) + 1;
+    const opTurnsTaken = data.turnsTaken?.[opU] || 0;
     const updates = {
       [`moves/${moveIdx}`]: { by: me.username, target: opU, cell: cellIdx, result, ts: Date.now() },
-      turn: opU
+      turn: opU,
+      [`turnsTaken/${me.username}`]: myTurnsTaken
     };
+    let myLives = data.lives?.[me.username] ?? 3;
     if (isBomb) {
-      const myLives = (data.lives?.[me.username] ?? 3) - 1;
+      myLives = myLives - 1;
       updates[`lives/${me.username}`] = myLives;
-      if (myLives<=0) { updates.phase='finished'; updates.winner=opU; }
+    }
+    const opLives = data.lives?.[opU] ?? 3;
+    // Only decide the match once turn counts are level again — i.e. after
+    // the player who is "behind" on turns has had their equalizing turn.
+    if (myTurnsTaken >= opTurnsTaken) {
+      const iAmOut = myLives <= 0;
+      const opIsOut = opLives <= 0;
+      if (iAmOut && opIsOut) {
+        updates.phase = 'finished'; updates.winner = null; updates.draw = true;
+      } else if (iAmOut) {
+        updates.phase = 'finished'; updates.winner = opU;
+      } else if (opIsOut) {
+        updates.phase = 'finished'; updates.winner = me.username;
+      }
     }
     await bdGameRef.update(updates);
   }
@@ -3929,10 +4296,15 @@ const FIREBASE_CONFIG = {
     }
   }
 
-  function bdShowVictory(winnerName, iWon) {
+  function bdShowVictory(winnerName, iWon, isDraw) {
     const overlay = document.getElementById('bdWinnerOverlay');
-    document.getElementById('bdWinnerText').textContent = iWon ? '🎉 You Win!' : '💥 You Lost!';
-    document.getElementById('bdWinnerSub').textContent = `${winnerName} is victorious!`;
+    if (isDraw) {
+      document.getElementById('bdWinnerText').textContent = "🤝 It's a Draw!";
+      document.getElementById('bdWinnerSub').textContent = 'Both duelists fell!';
+    } else {
+      document.getElementById('bdWinnerText').textContent = iWon ? '🎉 You Win!' : '💥 You Lost!';
+      document.getElementById('bdWinnerSub').textContent = `${winnerName} is victorious!`;
+    }
     overlay.classList.remove('hidden');
     const colors = ['#FF4757','#FF8C42','#FFD23F','#06D6A0','#26C6DA','#AB47BC','#FF4F9A','#7B61FF'];
     for (let i=0; i<40; i++) {
@@ -3985,7 +4357,7 @@ const FIREBASE_CONFIG = {
     bdGameRef = db.ref(`bombDuel/${chatId}/${newId}`);
     bdGameRef.child(`connected/${me.username}`).set(true);
     bdGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
-    bdMyBombs = []; bdLastMoveCount = 0;
+    bdMyBombs = []; bdLastMoveCount = 0; bdCoinTossShown = false;
     bdOpenModal();
     bdStartListening(chatId, newId);
   }
@@ -4022,6 +4394,8 @@ const FIREBASE_CONFIG = {
     if (e.target.id==='bdExitBtn'    || e.target.closest?.('#bdExitBtn'))    bdCleanup(false);
   });
   document.getElementById('bdLeftExitBtn').addEventListener('click', () => bdCleanup(false));
+  document.getElementById('bdCallHeadsBtn').addEventListener('click', () => bdSubmitCoinCall('Heads'));
+  document.getElementById('bdCallTailsBtn').addEventListener('click', () => bdSubmitCoinCall('Tails'));
 
   // Handle the tab closing/reloading while a Bomb Duel is in progress.
   window.addEventListener('beforeunload', () => {
