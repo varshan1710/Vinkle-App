@@ -958,6 +958,7 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 .xo-score-card.x-score { border-color: rgba(255,71,87,0.35); }
 .xo-score-card.o-score { border-color: rgba(171,71,188,0.35); }
 .xo-score-card.draw-score { border-color: rgba(255,210,63,0.35); }
+.xo-score-card.active-turn { box-shadow: 0 0 12px rgba(171,71,188,0.25); transform: translateY(-1px); }
 .xo-score-label {
   font-size: 10px; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.08em; margin-bottom: 4px;
@@ -1197,6 +1198,22 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   box-shadow: 0 2px 10px rgba(255,71,87,0.3);
 }
 .bd-invite-join-btn:hover { opacity: 0.88; box-shadow: 0 4px 18px rgba(255,71,87,0.5); }
+.xo-invite-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px; background: rgba(171,71,188,0.06);
+  border: 1.5px solid rgba(171,71,188,0.25); border-radius: var(--radius-md); margin-top: 2px;
+}
+.xo-invite-card .bd-invite-emoji { font-size: 28px; }
+.xo-invite-card .bd-invite-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.xo-invite-card .bd-invite-sub { font-size: 11px; color: var(--muted); }
+.xo-invite-join-btn {
+  padding: 8px 20px; border-radius: 50px; border: none;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  color: #fff; font-family: var(--font-body); font-weight: 900;
+  font-size: 12px; cursor: pointer; transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(171,71,188,0.3);
+}
+.xo-invite-join-btn:hover { opacity: 0.88; box-shadow: 0 4px 18px rgba(171,71,188,0.5); }
 
 /* ================================================================
    BOMB DUEL — OPPONENT LEFT / FORFEIT BANNER
@@ -1458,30 +1475,45 @@ input::placeholder { color: #3A3870; font-weight: 600; }
      XO GAME MODAL
 ════════════════════════════════════════ -->
 <div id="xoGameModal" class="xo-overlay hidden">
-  <div class="xo-card">
+  <div class="xo-card" id="xoCard">
     <div class="xo-header">
       <div class="xo-title">❌⭕ Tic Tac Toe</div>
       <button class="xo-close" id="xoCloseBtn">✕</button>
     </div>
     <div class="xo-scoreboard">
-      <div class="xo-score-card x-score">
-        <div class="xo-score-label">✕ Player</div>
+      <div class="xo-score-card x-score" id="xoPlayerMe">
+        <div class="xo-score-label" id="xoMyLabel">✕ You</div>
         <div class="xo-score-value" id="xScoreVal">0</div>
       </div>
       <div class="xo-score-card draw-score">
         <div class="xo-score-label">Draw</div>
         <div class="xo-score-value" id="drawScoreVal">0</div>
       </div>
-      <div class="xo-score-card o-score">
-        <div class="xo-score-label">○ Player</div>
+      <div class="xo-score-card o-score" id="xoPlayerOp">
+        <div class="xo-score-label" id="xoOpLabel">○ Waiting...</div>
         <div class="xo-score-value" id="oScoreVal">0</div>
       </div>
     </div>
-    <div class="xo-status" id="xoStatus">Player ✕ — your turn</div>
+    <div class="xo-status" id="xoStatus">Waiting for opponent to join...</div>
     <div class="xo-board" id="xoBoard"></div>
-    <div class="xo-actions">
-      <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="xoResetScoreBtn">Reset</button>
-      <button class="btn" id="xoNewGameBtn">New Game 🎮</button>
+    <div class="xo-actions" id="xoActions">
+      <button class="btn" disabled>⏳ Waiting...</button>
+    </div>
+
+    <div class="bd-winner-overlay hidden" id="xoWinnerOverlay">
+      <div class="bd-winner-text" id="xoWinnerText">🎉 Victory!</div>
+      <div class="bd-winner-sub" id="xoWinnerSub">Player wins!</div>
+      <div class="bd-winner-actions">
+        <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="xoExitBtn">Exit</button>
+        <button class="btn" id="xoRematchBtn">🔄 Rematch</button>
+      </div>
+    </div>
+    <div class="bd-left-banner hidden" id="xoLeftBanner">
+      <div class="bd-left-emoji">🚪</div>
+      <div class="bd-left-text" id="xoLeftText">Opponent left the game</div>
+      <div class="bd-winner-actions" style="margin-top:6px;">
+        <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="xoLeftExitBtn">Exit</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1859,7 +1891,7 @@ const FIREBASE_CONFIG = {
           lastTs = lm.ts;
           if (lm.ct) {
             const t = await decrypt(chatId, lm.ct, lm.iv);
-            lastText = t.startsWith('data:image/') ? '🎨 Drawing sent!' : t.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel Invite!' : t;
+            lastText = t.startsWith('data:image/') ? '🎨 Drawing sent!' : t.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel Invite!' : t.startsWith('[XO_INVITE:') ? '❌⭕ XO Game Invite!' : t;
           }
         }
         return { chatId, friendUsername, friendDisplay, lastText, lastTs };
@@ -2011,6 +2043,16 @@ const FIREBASE_CONFIG = {
                 <div class="bd-invite-label">Bomb Duel Match</div>
                 <div class="bd-invite-sub">Tap join to duel in 3x3 grids!</div>
                 <button class="bd-invite-join-btn" onclick="window._bdJoinFromChat('${path}')">Join Duel</button>
+              </div>
+            `;
+          } else if (text.startsWith('[XO_INVITE:') && text.endsWith(']')) {
+            const path = text.substring(11, text.length - 1);
+            body = `
+              <div class="xo-invite-card">
+                <div class="bd-invite-emoji">❌⭕</div>
+                <div class="bd-invite-label">Tic Tac Toe Match</div>
+                <div class="bd-invite-sub">Tap join to play a round!</div>
+                <button class="xo-invite-join-btn" onclick="window._xoJoinFromChat('${path}')">Join Game</button>
               </div>
             `;
           } else {
@@ -2572,7 +2614,8 @@ const FIREBASE_CONFIG = {
   document.getElementById('kebabXOGameChat').addEventListener('click', () => {
     document.getElementById('chatKebabMenu').classList.remove('open');
     document.getElementById('chatKebabBtn').classList.remove('open');
-    openXOModal();
+    if (!activeChat) { alert('Open a chat first to start an XO Game! ❌⭕'); return; }
+    xoCreateGame();
   });
   document.getElementById('kebabBombDuelChat').addEventListener('click', () => {
     document.getElementById('chatKebabMenu').classList.remove('open');
@@ -2582,135 +2625,337 @@ const FIREBASE_CONFIG = {
   });
 
   // ================================================================
-  // XO TIC-TAC-TOE GAME
+  // XO TIC-TAC-TOE — REALTIME MULTIPLAYER (invite via chat)
   // ================================================================
-  let xoBoard = Array(9).fill('');
-  let xoCurrentPlayer = 'X';
-  let xoGameOver = false;
-  let xoScores = { X: 0, O: 0, draw: 0 };
   const XO_WIN_COMBOS = [
     [0,1,2],[3,4,5],[6,7,8],
     [0,3,6],[1,4,7],[2,5,8],
     [0,4,8],[2,4,6]
   ];
 
-  function xoRenderBoard() {
+  let xoGameRef=null, xoGameId=null, xoListener=null;
+  let xoPhase='idle', xoMySymbol='';
+  let xoOpponentDisplay='';
+  let xoPresenceRefs=[];
+  let xoOpponentLeftShown=false;
+  let xoLastMoveCount=0;
+
+  function xoGenId() { return 'xo_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
+
+  async function xoCreateGame() {
+    if (!activeChat) return;
+    xoGameId = xoGenId();
+    const chatId = activeChat.chatId;
+    xoOpponentDisplay = activeChat.friendDisplay;
+    // Creator starts as X for match 1; startingSymbol alternates each rematch.
+    const gameData = {
+      createdBy: me.username, chatId,
+      players: { X: me.username, O: '' },
+      playerNames: { [me.username]: me.displayName },
+      board: Array(9).fill(''),
+      moves: [], turn: me.username,
+      phase: 'waiting_opponent', winner: null, draw: false,
+      scores: { X: 0, O: 0, draw: 0 },
+      matchCount: 1, startingSymbol: 'X', ts: Date.now(),
+      connected: { [me.username]: true }
+    };
+    xoGameRef = db.ref(`xoGame/${chatId}/${xoGameId}`);
+    await xoGameRef.set(gameData);
+    xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    await sendMsg(`[XO_INVITE:${chatId}/${xoGameId}]`);
+    xoOpenModal();
+    xoStartListening(chatId, xoGameId);
+  }
+
+  async function xoJoinGame(fullPath) {
+    const parts = fullPath.split('/');
+    if (parts.length < 2) return;
+    const chatId = parts.slice(0,-1).join('/');
+    const gameId = parts[parts.length-1];
+    xoGameRef = db.ref(`xoGame/${chatId}/${gameId}`);
+    const snap = await xoGameRef.get();
+    if (!snap.exists()) return alert('Game not found or expired.');
+    const data = snap.val();
+    if (data.phase==='finished' && data.players.X!==me.username && data.players.O!==me.username) return alert('This game has already ended.');
+    if (data.players.O && data.players.O!==me.username && data.players.X!==me.username) return alert('This game is full.');
+    if (data.players.O!==me.username && data.players.X!==me.username) {
+      await xoGameRef.child('players/O').set(me.username);
+      await xoGameRef.child(`playerNames/${me.username}`).set(me.displayName);
+    }
+    xoGameId = gameId;
+    const freshSnap = await xoGameRef.get();
+    const freshData = freshSnap.val();
+    const opUser = freshData.players.X===me.username ? freshData.players.O : freshData.players.X;
+    xoOpponentDisplay = (freshData.playerNames && freshData.playerNames[opUser]) || opUser;
+    if (freshData.phase==='waiting_opponent' && freshData.players.O) await xoGameRef.child('phase').set('playing');
+    await xoGameRef.child(`connected/${me.username}`).set(true);
+    xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    xoOpenModal();
+    xoStartListening(chatId, gameId);
+  }
+
+  window._xoJoinFromChat = (fp) => xoJoinGame(fp);
+
+  function xoOpenModal() {
+    document.getElementById('xoGameModal').classList.remove('hidden');
+    document.getElementById('xoWinnerOverlay').classList.add('hidden');
+    document.getElementById('xoLeftBanner').classList.add('hidden');
+    xoOpponentLeftShown = false;
+    xoPhase='waiting'; xoLastMoveCount=0;
+    document.getElementById('xoMyLabel').textContent = `✕ ${me.displayName}`;
+    document.getElementById('xoOpLabel').textContent = `○ ${xoOpponentDisplay || 'Waiting...'}`;
+    xoRenderBoard(Array(9).fill(''), true);
+  }
+
+  function xoStartListening(chatId, gameId) {
+    if (xoListener && xoGameRef) xoGameRef.off('value', xoListener);
+    xoClearPresenceWatchers();
+    xoGameRef = db.ref(`xoGame/${chatId}/${gameId}`);
+    xoListener = xoGameRef.on('value', snap => { if (snap.exists()) xoOnGameUpdate(snap.val()); });
+  }
+
+  function xoClearPresenceWatchers() {
+    xoPresenceRefs.forEach(({ref, fn}) => ref.off('value', fn));
+    xoPresenceRefs = [];
+  }
+
+  function xoWatchOpponentPresence(opUsername) {
+    xoClearPresenceWatchers();
+    if (!opUsername) return;
+    const ref = db.ref(`presence/${opUsername}`);
+    const fn = ref.on('value', snap => {
+      if (xoPhase==='idle' || !xoGameRef) return;
+      const online = snap.exists() && snap.val().online;
+      if (!online) xoHandleOpponentLeft();
+    });
+    xoPresenceRefs.push({ref, fn});
+  }
+
+  function xoHandleOpponentLeft() {
+    if (xoOpponentLeftShown) return;
+    if (xoPhase==='idle') return;
+    const modalOpen = !document.getElementById('xoGameModal').classList.contains('hidden');
+    if (!modalOpen) return;
+    xoOpponentLeftShown = true;
+    document.getElementById('xoLeftText').textContent = `${xoOpponentDisplay || 'Opponent'} left the game`;
+    document.getElementById('xoLeftBanner').classList.remove('hidden');
+    document.getElementById('xoWinnerOverlay').classList.add('hidden');
+  }
+
+  function xoOnGameUpdate(data) {
+    if (!data) return;
+    const myU = me.username;
+    const isX = data.players.X===myU;
+    xoMySymbol = isX ? 'X' : 'O';
+    const opSymbol = isX ? 'O' : 'X';
+    const opU = data.players[opSymbol] || '';
+    if (opU && data.playerNames && data.playerNames[opU]) xoOpponentDisplay = data.playerNames[opU];
+    else if (opU) xoOpponentDisplay = opU;
+
+    document.getElementById('xoMyLabel').textContent = `${xoMySymbol==='X'?'✕':'○'} ${me.displayName}`;
+    document.getElementById('xoOpLabel').textContent = opU ? `${opSymbol==='X'?'✕':'○'} ${xoOpponentDisplay}` : `${opSymbol==='X'?'✕':'○'} Waiting...`;
+
+    const scores = data.scores || {X:0,O:0,draw:0};
+    document.getElementById('xScoreVal').textContent = scores.X;
+    document.getElementById('oScoreVal').textContent = scores.O;
+    document.getElementById('drawScoreVal').textContent = scores.draw;
+
+    const phase = data.phase; xoPhase = phase;
+    if (opU) xoWatchOpponentPresence(opU);
+    if (opU && data.connected && data.connected[opU]===false && phase!=='finished') {
+      xoHandleOpponentLeft();
+    }
+
+    const isMyTurn = data.turn===myU;
+    document.getElementById('xoPlayerMe').classList.toggle('active-turn', isMyTurn && phase==='playing');
+    document.getElementById('xoPlayerOp').classList.toggle('active-turn', !isMyTurn && phase==='playing');
+
+    if (phase==='waiting_opponent') {
+      xoUpdateStatus('Waiting for opponent to join...', '');
+      document.getElementById('xoActions').innerHTML = `<button class="btn" disabled>⏳ Waiting...</button>`;
+      xoRenderBoard(data.board || Array(9).fill(''), true);
+    } else if (phase==='playing') {
+      const myName = me.displayName;
+      const turnName = isMyTurn ? myName : (xoOpponentDisplay || 'Opponent');
+      xoUpdateStatus(isMyTurn ? `🎯 Your turn (${xoMySymbol==='X'?'✕':'○'})` : `⏳ ${turnName}'s turn...`, isMyTurn ? 'highlight' : '');
+      document.getElementById('xoActions').innerHTML = '';
+      xoRenderBoard(data.board || Array(9).fill(''), !isMyTurn, data.moves||[]);
+      xoCheckForAnimation(data);
+    } else if (phase==='finished') {
+      document.getElementById('xoLeftBanner').classList.add('hidden');
+      xoRenderBoard(data.board || Array(9).fill(''), true, data.moves||[]);
+      xoHighlightWinCombo(data.board || []);
+      document.getElementById('xoActions').innerHTML = '';
+      if (data.draw) {
+        xoUpdateStatus("🤝 It's a draw!", 'highlight');
+        xoShowResultOverlay(null, true);
+      } else {
+        const winnerName = data.playerNames?.[data.winner] || data.winner;
+        const iWon = data.winner===myU;
+        xoUpdateStatus(iWon ? '🎉 You win!' : `${winnerName} wins!`, 'highlight');
+        xoShowResultOverlay(winnerName, false, iWon);
+      }
+    }
+  }
+
+  function xoUpdateStatus(text, cls) {
+    const el = document.getElementById('xoStatus');
+    el.textContent = text;
+    el.className = 'xo-status' + (cls ? ' '+cls : '');
+  }
+
+  function xoRenderBoard(board, disabled, moves) {
     const boardEl = document.getElementById('xoBoard');
     boardEl.innerHTML = '';
-    xoBoard.forEach((val, i) => {
+    board.forEach((val, i) => {
       const cell = document.createElement('div');
       cell.className = 'xo-cell' + (val ? ' taken ' + (val==='X' ? 'x-mark' : 'o-mark') : '');
       cell.textContent = val==='X' ? '✕' : val==='O' ? '○' : '';
-      cell.addEventListener('click', () => xoMakeMove(i));
+      if (!disabled && !val) cell.addEventListener('click', () => xoMakeMove(i));
+      else if (!val) cell.style.cursor = 'default';
       boardEl.appendChild(cell);
     });
   }
 
-  function xoMakeMove(idx) {
-    if (xoGameOver || xoBoard[idx]) return;
-    xoBoard[idx] = xoCurrentPlayer;
-    xoRenderBoard();
-    const winner = xoCheckWinner();
-    const xName = me ? me.displayName : 'X Player';
-    const oName = activeChat ? activeChat.friendDisplay : 'O Player';
-    if (winner) {
-      xoGameOver = true;
-      xoScores[winner]++;
-      xoUpdateScoreboard();
-      xoHighlightWin(winner);
-      const winnerName = winner==='X' ? xName : oName;
-      const s = document.getElementById('xoStatus');
-      s.textContent = `🎉 ${winnerName} wins!`;
-      s.classList.add('highlight');
-      xoSpawnButterflies();
-      xoShowWinnerBanner(winnerName);
-      return;
-    }
-    if (xoBoard.every(c => c)) {
-      xoGameOver = true;
-      xoScores.draw++;
-      xoUpdateScoreboard();
-      const s = document.getElementById('xoStatus');
-      s.textContent = "🤝 It's a draw!";
-      s.classList.add('highlight');
-      return;
-    }
-    xoCurrentPlayer = xoCurrentPlayer==='X' ? 'O' : 'X';
-    const nextName = xoCurrentPlayer==='X' ? xName : oName;
-    document.getElementById('xoStatus').textContent = `${nextName} (${xoCurrentPlayer==='X'?'✕':'○'}) — your turn`;
-  }
-
-  function xoCheckWinner() {
-    for (const [a,b,c] of XO_WIN_COMBOS)
-      if (xoBoard[a] && xoBoard[a]===xoBoard[b] && xoBoard[a]===xoBoard[c]) return xoBoard[a];
-    return null;
-  }
-
-  function xoHighlightWin(winner) {
+  function xoHighlightWinCombo(board) {
     for (const [a,b,c] of XO_WIN_COMBOS) {
-      if (xoBoard[a]===winner && xoBoard[b]===winner && xoBoard[c]===winner) {
-        const cells = document.querySelectorAll('.xo-cell');
-        cells[a].classList.add('win-cell');
-        cells[b].classList.add('win-cell');
-        cells[c].classList.add('win-cell');
+      if (board[a] && board[a]===board[b] && board[a]===board[c]) {
+        const cells = document.querySelectorAll('#xoBoard .xo-cell');
+        cells[a]?.classList.add('win-cell');
+        cells[b]?.classList.add('win-cell');
+        cells[c]?.classList.add('win-cell');
         break;
       }
     }
   }
 
-  function xoUpdateScoreboard() {
-    document.getElementById('xScoreVal').textContent = xoScores.X;
-    document.getElementById('oScoreVal').textContent = xoScores.O;
-    document.getElementById('drawScoreVal').textContent = xoScores.draw;
+  async function xoMakeMove(idx) {
+    if (!xoGameRef || xoPhase!=='playing') return;
+    const snap = await xoGameRef.get();
+    const data = snap.val();
+    if (data.turn!==me.username || data.phase!=='playing') return;
+    const board = data.board || Array(9).fill('');
+    if (board[idx]) return;
+    board[idx] = xoMySymbol;
+    const winner = xoCheckWinner(board);
+    const isDraw = !winner && board.every(c => c);
+    const opU = data.players.X===me.username ? data.players.O : data.players.X;
+    const updates = { board, turn: opU };
+    const moveIdx = (data.moves||[]).length;
+    updates[`moves/${moveIdx}`] = { by: me.username, cell: idx, symbol: xoMySymbol, ts: Date.now() };
+    if (winner || isDraw) {
+      updates.phase = 'finished';
+      updates.draw = !!isDraw;
+      updates.winner = winner ? me.username : null;
+      const scores = data.scores || {X:0,O:0,draw:0};
+      if (isDraw) scores.draw = (scores.draw||0)+1;
+      else scores[xoMySymbol] = (scores[xoMySymbol]||0)+1;
+      updates.scores = scores;
+    }
+    await xoGameRef.update(updates);
   }
 
-  function xoNewGame() {
-    xoBoard = Array(9).fill('');
-    xoCurrentPlayer = 'X';
-    xoGameOver = false;
-    xoRenderBoard();
-    const xName = me ? me.displayName : 'X Player';
-    const s = document.getElementById('xoStatus');
-    s.textContent = `${xName} (✕) — your turn`;
-    s.classList.remove('highlight');
-    document.querySelectorAll('.xo-butterfly').forEach(el => el.remove());
-    const wb = document.querySelector('.xo-winner-banner');
-    if (wb) wb.remove();
+  function xoCheckWinner(board) {
+    for (const [a,b,c] of XO_WIN_COMBOS)
+      if (board[a] && board[a]===board[b] && board[a]===board[c]) return board[a];
+    return null;
   }
 
-  function xoResetAll() {
-    xoScores = { X: 0, O: 0, draw: 0 };
-    xoUpdateScoreboard();
-    xoNewGame();
+  function xoCheckForAnimation(data) {
+    const moves = data.moves || [];
+    if (moves.length !== xoLastMoveCount) xoLastMoveCount = moves.length;
   }
 
-  function openXOModal() {
-    document.getElementById('xoGameModal').classList.remove('hidden');
-    const xName = me ? me.displayName : 'X Player';
-    const oName = activeChat ? activeChat.friendDisplay : 'O Player';
-    document.querySelector('.xo-score-card.x-score .xo-score-label').textContent = `✕ ${xName}`;
-    document.querySelector('.xo-score-card.o-score .xo-score-label').textContent = `○ ${oName}`;
-    xoNewGame();
+  function xoShowResultOverlay(winnerName, isDraw, iWon) {
+    const overlay = document.getElementById('xoWinnerOverlay');
+    if (isDraw) {
+      document.getElementById('xoWinnerText').textContent = "🤝 It's a Draw!";
+      document.getElementById('xoWinnerSub').textContent = 'Nobody wins this round!';
+    } else {
+      document.getElementById('xoWinnerText').textContent = iWon ? '🎉 You Win!' : '😅 You Lost!';
+      document.getElementById('xoWinnerSub').textContent = `${winnerName} is victorious!`;
+    }
+    overlay.classList.remove('hidden');
+    if (!isDraw && iWon) xoSpawnButterflies();
+  }
+
+  // Rematch: swap the starting symbol so whoever was O last time gets X next —
+  // "if 1st time I get O, next match I get X", alternating every game.
+  async function xoRematch() {
+    if (!xoGameRef || !activeChat) return;
+    const snap = await xoGameRef.get();
+    const data = snap.val(); if (!data) return;
+    const newMatchCount = (data.matchCount||1)+1;
+    const newStartSymbol = data.startingSymbol==='X' ? 'O' : 'X';
+    // Swap X/O between the two players each rematch, so whoever was O last
+    // time is X this time (and vice versa) — the starting symbol alternates too.
+    const oldX = data.players.X, oldO = data.players.O;
+    const swappedPlayers = { X: oldO, O: oldX };
+    const startingUser = swappedPlayers[newStartSymbol];
+    const newId = xoGenId();
+    const chatId = data.chatId || activeChat.chatId;
+    const newGame = {
+      createdBy: me.username, chatId,
+      players: swappedPlayers,
+      playerNames: data.playerNames||{},
+      board: Array(9).fill(''),
+      moves: [], turn: startingUser,
+      phase: 'playing', winner: null, draw: false,
+      scores: data.scores || {X:0,O:0,draw:0},
+      matchCount: newMatchCount, startingSymbol: newStartSymbol, ts: Date.now(),
+      connected: { [me.username]: true }
+    };
+    xoGameRef.off('value', xoListener);
+    xoClearPresenceWatchers();
+    xoGameId = newId;
+    xoGameRef = db.ref(`xoGame/${chatId}/${newId}`);
+    await xoGameRef.set(newGame);
+    xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    xoLastMoveCount=0;
+    xoOpenModal();
+    xoStartListening(chatId, newId);
+  }
+
+  function xoCleanup(skipPresenceWrite) {
+    if (xoGameRef && !skipPresenceWrite) {
+      try {
+        xoGameRef.child(`connected/${me.username}`).onDisconnect().cancel();
+        xoGameRef.child(`connected/${me.username}`).set(false);
+      } catch(e) {}
+    }
+    if (xoGameRef && xoListener) xoGameRef.off('value', xoListener);
+    xoClearPresenceWatchers();
+    xoGameRef=null; xoGameId=null; xoListener=null;
+    xoPhase='idle'; xoLastMoveCount=0;
+    xoOpponentLeftShown=false;
+    document.getElementById('xoGameModal').classList.add('hidden');
   }
 
   document.getElementById('kebabXOGame').addEventListener('click', () => {
     document.getElementById('paintKebabMenu').classList.remove('open');
     document.getElementById('paintKebabBtn').classList.remove('open');
-    openXOModal();
+    if (!activeChat) { alert('Open a chat first to start an XO Game! ❌⭕'); return; }
+    xoCreateGame();
   });
-  document.getElementById('xoCloseBtn').addEventListener('click', () =>
-    document.getElementById('xoGameModal').classList.add('hidden')
-  );
-  document.getElementById('xoNewGameBtn').addEventListener('click', xoNewGame);
-  document.getElementById('xoResetScoreBtn').addEventListener('click', xoResetAll);
+  document.getElementById('xoCloseBtn').addEventListener('click', () => xoCleanup(false));
   document.getElementById('xoGameModal').addEventListener('click', e => {
-    if (e.target===document.getElementById('xoGameModal'))
-      document.getElementById('xoGameModal').classList.add('hidden');
+    if (e.target===document.getElementById('xoGameModal')) xoCleanup(false);
+  });
+  document.getElementById('xoCard').addEventListener('click', e => {
+    if (e.target.id==='xoRematchBtn' || e.target.closest?.('#xoRematchBtn')) xoRematch();
+    if (e.target.id==='xoExitBtn'    || e.target.closest?.('#xoExitBtn'))    xoCleanup(false);
+  });
+  document.getElementById('xoLeftExitBtn').addEventListener('click', () => xoCleanup(false));
+
+  window.addEventListener('beforeunload', () => {
+    if (xoGameRef && xoPhase!=='idle') {
+      try { xoGameRef.child(`connected/${me.username}`).set(false); } catch(e) {}
+    }
   });
 
   // ── Butterfly winner animation ──
   function xoSpawnButterflies() {
-    const card = document.querySelector('.xo-card');
+    const card = document.getElementById('xoCard');
     if (!card) return;
     const paths = ['bf-path-1','bf-path-2','bf-path-3'];
     for (let i=0; i<10; i++) {
@@ -2724,21 +2969,6 @@ const FIREBASE_CONFIG = {
       card.appendChild(bf);
       bf.addEventListener('animationend', () => bf.remove());
     }
-  }
-
-  function xoShowWinnerBanner(winnerName) {
-    const card = document.querySelector('.xo-card');
-    if (!card) return;
-    const old = card.querySelector('.xo-winner-banner');
-    if (old) old.remove();
-    const banner = document.createElement('div');
-    banner.className = 'xo-winner-banner';
-    banner.innerHTML = `
-      <div class="xo-wb-text">🎉 ${winnerName} Wins!</div>
-      <div class="xo-wb-sub">Tap "New Game 🎮" to play again</div>
-    `;
-    card.appendChild(banner);
-    banner.addEventListener('click', () => banner.remove());
   }
 
   // ================================================================

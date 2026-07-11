@@ -866,6 +866,354 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   .composer { padding: 8px 12px 14px; }
   .paint-fab span { display: none; }
 }
+
+/* ================================================================
+   KEBAB MENU (Paint Modal)
+================================================================ */
+.kebab-menu-wrap { position: relative; display: inline-block; }
+.kebab-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(45,43,90,0.7); border: 1.5px solid var(--line);
+  color: var(--muted); font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s ease; font-family: var(--font-body);
+  letter-spacing: 2px; line-height: 1;
+}
+.kebab-btn:hover { border-color: var(--purple); color: var(--text); background: rgba(171,71,188,0.1); }
+.kebab-btn.open { background: var(--panel-raised); border-color: var(--purple); color: var(--purple); }
+.kebab-dropdown {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  min-width: 190px; background: var(--panel-raised);
+  border: 1.5px solid var(--line); border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; overflow: hidden;
+  opacity: 0; transform: translateY(-8px) scale(0.96);
+  pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.kebab-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+.kebab-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; cursor: pointer;
+  font-family: var(--font-body); font-size: 13px;
+  font-weight: 700; color: var(--text);
+  transition: background 0.12s ease; border: none;
+  background: none; width: 100%; text-align: left;
+}
+.kebab-dropdown-item:hover { background: rgba(171,71,188,0.1); }
+.kebab-dropdown-item .kebab-icon { font-size: 16px; width: 22px; text-align: center; }
+.kebab-dropdown-divider { height: 1.5px; background: var(--line); margin: 2px 0; }
+
+/* Draw title row with kebab */
+.draw-title-row {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+}
+
+/* ================================================================
+   XO GAME MODAL
+================================================================ */
+.xo-overlay {
+  position: fixed; inset: 0; background: rgba(6,5,18,0.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 260; padding: 24px; backdrop-filter: blur(10px);
+  animation: fadeIn 0.2s ease;
+}
+.xo-card {
+  width: 100%; max-width: 380px;
+  background: var(--panel); border: 1.5px solid var(--line);
+  border-radius: var(--radius-xl); padding: 28px;
+  position: relative; animation: slideUp 0.25s cubic-bezier(.16,1,.3,1);
+  overflow: hidden;
+}
+.xo-card::before {
+  content: ""; position: absolute; top: -60px; left: -60px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: conic-gradient(from 120deg, var(--red), var(--yellow), var(--lime), var(--purple), var(--red));
+  opacity: 0.1; filter: blur(22px); pointer-events: none;
+}
+.xo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; position: relative; z-index: 1;
+}
+.xo-title {
+  font-family: var(--font-display); font-size: 22px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.xo-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.05); border: 1.5px solid var(--line);
+  color: var(--muted); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.xo-close:hover { color: var(--text); background: rgba(255,255,255,0.1); border-color: var(--purple); }
+.xo-scoreboard {
+  display: flex; justify-content: center; gap: 14px;
+  margin-bottom: 18px; position: relative; z-index: 1;
+}
+.xo-score-card {
+  flex: 1; max-width: 100px; text-align: center;
+  padding: 10px 8px; border-radius: var(--radius-md);
+  border: 1.5px solid var(--line); background: rgba(12,11,29,0.6);
+}
+.xo-score-card.x-score { border-color: rgba(255,71,87,0.35); }
+.xo-score-card.o-score { border-color: rgba(171,71,188,0.35); }
+.xo-score-card.draw-score { border-color: rgba(255,210,63,0.35); }
+.xo-score-label {
+  font-size: 10px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 4px;
+}
+.xo-score-card.x-score .xo-score-label { color: var(--red); }
+.xo-score-card.o-score .xo-score-label { color: var(--purple); }
+.xo-score-card.draw-score .xo-score-label { color: var(--yellow); }
+.xo-score-value { font-family: var(--font-display); font-size: 24px; color: var(--text); }
+.xo-status {
+  text-align: center; font-size: 14px; font-weight: 700;
+  color: var(--muted); margin-bottom: 14px; min-height: 22px;
+  position: relative; z-index: 1; transition: color 0.2s ease;
+}
+.xo-status.highlight { color: var(--text); }
+.xo-board {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin: 0 auto 18px; max-width: 280px;
+  position: relative; z-index: 1;
+}
+.xo-cell {
+  aspect-ratio: 1; border-radius: var(--radius-md);
+  background: rgba(12,11,29,0.7); border: 1.5px solid var(--line);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 42px;
+  color: transparent; transition: all 0.15s ease;
+  position: relative; overflow: hidden;
+}
+.xo-cell:hover:not(.taken) { border-color: rgba(171,71,188,0.4); background: rgba(171,71,188,0.06); }
+.xo-cell.taken { cursor: default; }
+.xo-cell.x-mark { color: var(--red); animation: xoPop 0.3s cubic-bezier(.34,1.56,.64,1); }
+.xo-cell.o-mark { color: var(--purple); animation: xoPop 0.3s cubic-bezier(.34,1.56,.64,1); }
+.xo-cell.win-cell {
+  border-color: var(--yellow) !important;
+  box-shadow: 0 0 16px rgba(255,210,63,0.3), inset 0 0 20px rgba(255,210,63,0.08);
+  animation: xoWinPulse 0.8s ease infinite;
+}
+@keyframes xoPop { from { transform: scale(0.3) rotate(-15deg); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes xoWinPulse {
+  0%,100% { box-shadow: 0 0 16px rgba(255,210,63,0.3), inset 0 0 20px rgba(255,210,63,0.08); }
+  50% { box-shadow: 0 0 28px rgba(255,210,63,0.5), inset 0 0 30px rgba(255,210,63,0.15); }
+}
+.xo-actions { display: flex; gap: 8px; position: relative; z-index: 1; }
+.xo-actions .btn { flex: 1; margin-top: 0; font-size: 13px; padding: 11px 0; border-radius: 50px; }
+
+/* ================================================================
+   XO BUTTERFLY WINNER ANIMATION
+================================================================ */
+@keyframes butterflyFloat1 {
+  0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  25%  { transform: translate(80px,-120px) rotate(15deg) scale(1.1); }
+  50%  { transform: translate(-60px,-220px) rotate(-10deg) scale(0.9); }
+  75%  { transform: translate(100px,-300px) rotate(20deg) scale(1.05); }
+  90%  { opacity: 1; }
+  100% { transform: translate(-40px,-400px) rotate(-5deg) scale(0.8); opacity: 0; }
+}
+@keyframes butterflyFloat2 {
+  0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  25%  { transform: translate(-90px,-100px) rotate(-20deg) scale(1.15); }
+  50%  { transform: translate(70px,-200px) rotate(12deg) scale(0.85); }
+  75%  { transform: translate(-80px,-280px) rotate(-18deg) scale(1.1); }
+  90%  { opacity: 1; }
+  100% { transform: translate(50px,-380px) rotate(8deg) scale(0.7); opacity: 0; }
+}
+@keyframes butterflyFloat3 {
+  0%   { transform: translate(0,0) rotate(5deg) scale(0.9); opacity: 0; }
+  10%  { opacity: 1; }
+  30%  { transform: translate(60px,-150px) rotate(-12deg) scale(1.2); }
+  60%  { transform: translate(-80px,-250px) rotate(15deg) scale(0.95); }
+  90%  { opacity: 0.8; }
+  100% { transform: translate(30px,-400px) rotate(-8deg) scale(0.6); opacity: 0; }
+}
+@keyframes wingFlap { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(0.3); } }
+.xo-butterfly {
+  position: absolute; pointer-events: none; z-index: 10; font-size: 28px;
+  filter: drop-shadow(0 2px 6px rgba(255,79,154,0.4));
+}
+.xo-butterfly .bf-wing { display: inline-block; animation: wingFlap 0.2s ease infinite; }
+.xo-butterfly.bf-path-1 { animation: butterflyFloat1 4s ease-in-out forwards; }
+.xo-butterfly.bf-path-2 { animation: butterflyFloat2 4.5s ease-in-out forwards; }
+.xo-butterfly.bf-path-3 { animation: butterflyFloat3 3.8s ease-in-out forwards; }
+.xo-winner-banner {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(12,11,29,0.87); backdrop-filter: blur(8px);
+  border-radius: var(--radius-xl); animation: fadeIn 0.4s ease;
+}
+.xo-winner-banner .xo-wb-text {
+  font-family: var(--font-display); font-size: 28px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  text-align: center; margin-bottom: 6px;
+}
+.xo-winner-banner .xo-wb-sub { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+/* ================================================================
+   BOMB DUEL GAME STYLES
+================================================================ */
+.bd-overlay {
+  position: fixed; inset: 0; background: rgba(6,5,18,0.9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 260; padding: 16px; backdrop-filter: blur(12px);
+  animation: fadeIn 0.2s ease;
+}
+.bd-card {
+  width: 100%; max-width: 520px; background: var(--panel);
+  border: 1.5px solid var(--line); border-radius: var(--radius-xl);
+  padding: 24px; position: relative;
+  animation: slideUp 0.25s cubic-bezier(.16,1,.3,1);
+  overflow: hidden; max-height: 95vh; overflow-y: auto;
+}
+.bd-card::before {
+  content: ""; position: absolute; top: -80px; right: -80px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: conic-gradient(from 160deg, var(--red), var(--yellow), var(--orange), var(--pink));
+  opacity: 0.1; filter: blur(24px); pointer-events: none;
+}
+.bd-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; position: relative; z-index: 1;
+}
+.bd-title {
+  font-family: var(--font-display); font-size: 21px;
+  background: linear-gradient(135deg, var(--red), var(--yellow));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.bd-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.05); border: 1.5px solid var(--line);
+  color: var(--muted); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.bd-close:hover { color: var(--text); background: rgba(255,255,255,0.1); border-color: var(--red); }
+.bd-players-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 14px; position: relative; z-index: 1;
+}
+.bd-player-card {
+  flex: 1; padding: 10px 12px; border-radius: var(--radius-md);
+  border: 1.5px solid var(--line); background: rgba(12,11,29,0.5);
+  text-align: center; transition: border-color 0.2s ease;
+}
+.bd-player-card.active-turn { border-color: var(--purple); box-shadow: 0 0 12px rgba(171,71,188,0.2); }
+.bd-player-card .bd-pname {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
+}
+.bd-player-card .bd-lives { display: flex; justify-content: center; gap: 3px; font-size: 16px; }
+.bd-player-card .bd-lives .heart { transition: all 0.3s ease; }
+.bd-player-card .bd-lives .heart.lost { filter: grayscale(1) opacity(0.3); transform: scale(0.8); }
+.bd-vs { font-family: var(--font-display); font-size: 14px; color: var(--muted); flex-shrink: 0; }
+.bd-status {
+  text-align: center; font-size: 13px; font-weight: 700;
+  color: var(--muted); margin-bottom: 12px; min-height: 20px;
+  position: relative; z-index: 1; transition: color 0.2s ease;
+}
+.bd-status.your-turn { color: var(--lime); }
+.bd-grids-wrap {
+  display: flex; gap: 16px; justify-content: center;
+  margin-bottom: 16px; position: relative; z-index: 1;
+}
+.bd-grid-section { flex: 1; max-width: 210px; }
+.bd-grid-label {
+  font-size: 10px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); text-align: center; margin-bottom: 6px;
+}
+.bd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.bd-cell {
+  aspect-ratio: 1; border-radius: var(--radius-sm);
+  background: rgba(12,11,29,0.7); border: 1.5px solid var(--line);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; transition: all 0.15s ease; position: relative; overflow: hidden;
+}
+.bd-cell:hover:not(.revealed):not(.bd-cell-disabled) { border-color: rgba(255,71,87,0.4); background: rgba(255,71,87,0.06); }
+.bd-cell.bd-cell-disabled { cursor: default; opacity: 0.6; }
+.bd-cell.bomb-placed { background: rgba(255,71,87,0.12); border-color: rgba(255,71,87,0.35); }
+.bd-cell.bomb-placed::after { content: '💣'; font-size: 18px; }
+.bd-cell.revealed { cursor: default; }
+.bd-cell.revealed-safe { background: rgba(6,214,160,0.08); border-color: rgba(6,214,160,0.3); }
+.bd-cell.revealed-safe::after { content: '✓'; color: var(--lime); font-weight: 900; font-size: 18px; }
+.bd-cell.revealed-bomb { background: rgba(255,71,87,0.15); border-color: rgba(255,71,87,0.4); }
+.bd-cell.revealed-bomb::after { content: '💥'; font-size: 20px; }
+.bd-actions { display: flex; gap: 8px; position: relative; z-index: 1; }
+.bd-actions .btn { flex: 1; margin-top: 0; font-size: 13px; padding: 11px 0; }
+.bd-placing-hint { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 8px; position: relative; z-index: 1; }
+.bd-bomb-counter { font-weight: 900; color: var(--red); }
+@keyframes bdExplosion { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(2.5); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
+@keyframes bdSmoke { 0% { transform: translate(0,0) scale(0.5); opacity: 0.7; } 100% { transform: translate(var(--sx), var(--sy)) scale(1.5); opacity: 0; } }
+@keyframes bdShake { 0%,100% { transform: translate(0,0); } 10% { transform: translate(-4px,2px); } 20% { transform: translate(4px,-2px); } 30% { transform: translate(-3px,3px); } 40% { transform: translate(3px,-1px); } 50% { transform: translate(-2px,2px); } 60% { transform: translate(2px,-2px); } 70% { transform: translate(-1px,1px); } 80% { transform: translate(1px,-1px); } }
+@keyframes bdConfettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(500px) rotate(720deg); opacity: 0; } }
+@keyframes bdConfettiSway { 0%,100% { margin-left: 0; } 25% { margin-left: 15px; } 75% { margin-left: -15px; } }
+.bd-explosion-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,200,50,0.9) 0%, rgba(255,71,87,0.6) 40%, transparent 70%);
+  animation: bdExplosion 0.6s ease-out forwards; pointer-events: none; z-index: 5;
+}
+.bd-smoke {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: rgba(180,180,180,0.5); pointer-events: none; z-index: 4;
+  animation: bdSmoke 0.8s ease-out forwards;
+}
+.bd-card.shaking { animation: bdShake 0.4s ease; }
+.bd-winner-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(12,11,29,0.93); backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl); animation: fadeIn 0.5s ease;
+}
+.bd-winner-text {
+  font-family: var(--font-display); font-size: 26px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 4px; text-align: center;
+}
+.bd-winner-sub { font-size: 16px; color: var(--text); font-weight: 700; margin-bottom: 16px; }
+.bd-winner-actions { display: flex; gap: 8px; }
+.bd-winner-actions .btn { width: auto; padding: 11px 24px; margin: 0; font-size: 13px; }
+.bd-confetti {
+  position: absolute; width: 8px; height: 8px; border-radius: 2px; pointer-events: none; z-index: 11;
+  animation: bdConfettiFall var(--dur) ease-in forwards, bdConfettiSway var(--sway) ease-in-out infinite;
+}
+.bd-invite-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px; background: rgba(255,71,87,0.06);
+  border: 1.5px solid rgba(255,71,87,0.2); border-radius: var(--radius-md); margin-top: 2px;
+}
+.bd-invite-card .bd-invite-emoji { font-size: 28px; }
+.bd-invite-card .bd-invite-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.bd-invite-card .bd-invite-sub { font-size: 11px; color: var(--muted); }
+.bd-invite-join-btn {
+  padding: 8px 20px; border-radius: 50px; border: none;
+  background: linear-gradient(135deg, var(--red), var(--yellow));
+  color: #fff; font-family: var(--font-body); font-weight: 900;
+  font-size: 12px; cursor: pointer; transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(255,71,87,0.3);
+}
+.bd-invite-join-btn:hover { opacity: 0.88; box-shadow: 0 4px 18px rgba(255,71,87,0.5); }
+
+/* ================================================================
+   BOMB DUEL — OPPONENT LEFT / FORFEIT BANNER
+================================================================ */
+.bd-left-banner {
+  position: absolute; inset: 0; z-index: 12;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 20px;
+  background: rgba(12,11,29,0.95); backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl); animation: fadeIn 0.3s ease;
+}
+.bd-left-banner .bd-left-emoji { font-size: 40px; }
+.bd-left-banner .bd-left-text {
+  font-family: var(--font-display); font-size: 20px; color: var(--text);
+}
+.bd-left-banner .bd-left-sub { font-size: 13px; color: var(--muted); font-weight: 600; max-width: 280px; }
+
 </style>
 </head>
 <body>
@@ -985,6 +1333,20 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         </div>
         <div class="head-actions">
           <button class="paint-fab" id="paintBtn">🎨 <span>Paint</span></button>
+          <div class="kebab-menu-wrap">
+            <button class="kebab-btn" id="chatKebabBtn" title="Games">⋮</button>
+            <div class="kebab-dropdown" id="chatKebabMenu">
+              <button class="kebab-dropdown-item" id="kebabPaintOpen">
+                <span class="kebab-icon">🎨</span> Paint
+              </button>
+              <button class="kebab-dropdown-item" id="kebabXOGameChat">
+                <span class="kebab-icon">❌⭕</span> XO Game
+              </button>
+              <button class="kebab-dropdown-item" id="kebabBombDuelChat">
+                <span class="kebab-icon">💣</span> Bomb Duel
+              </button>
+            </div>
+          </div>
           <button class="icon-btn" id="clearChatBtn" title="Clear Chat" style="color:var(--danger);font-size:18px;margin-left:4px">🗑️</button>
         </div>
       </div>
@@ -1019,8 +1381,24 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 ════════════════════════════════════════ -->
 <div id="drawingModal" class="modal-overlay hidden">
   <div class="modal-card drawing-card">
-    <button class="close-x" id="drawingClose">✕</button>
-    <div class="draw-title">🎨 Vinkle Paint</div>
+    <div class="draw-title-row">
+      <div class="draw-title">🎨 Vinkle Paint</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="kebab-menu-wrap">
+          <button class="kebab-btn" id="paintKebabBtn" title="More games">⋮</button>
+          <div class="kebab-dropdown" id="paintKebabMenu">
+            <button class="kebab-dropdown-item" id="kebabXOGame">
+              <span class="kebab-icon">❌⭕</span> XO Game
+            </button>
+            <div class="kebab-dropdown-divider"></div>
+            <button class="kebab-dropdown-item" id="kebabBombDuel">
+              <span class="kebab-icon">💣</span> Bomb Duel
+            </button>
+          </div>
+        </div>
+        <button class="close-x" id="drawingClose" style="position:static;">✕</button>
+      </div>
+    </div>
 
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="paintCanvas"></canvas>
@@ -1073,6 +1451,96 @@ input::placeholder { color: #3A3870; font-weight: 600; }
     <button class="btn" id="deleteForMeBtn" style="margin-top:16px; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">Delete for Me 👤</button>
     <button class="btn" id="deleteForEveryoneBtn" style="margin-top:10px; background:var(--red); color:#fff; box-shadow:none;">Delete for Everyone 👥</button>
     <button class="btn" id="deleteCancelBtn" style="margin-top:10px; background:transparent; border:none; color:var(--muted); box-shadow:none;">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     XO GAME MODAL
+════════════════════════════════════════ -->
+<div id="xoGameModal" class="xo-overlay hidden">
+  <div class="xo-card">
+    <div class="xo-header">
+      <div class="xo-title">❌⭕ Tic Tac Toe</div>
+      <button class="xo-close" id="xoCloseBtn">✕</button>
+    </div>
+    <div class="xo-scoreboard">
+      <div class="xo-score-card x-score">
+        <div class="xo-score-label">✕ Player</div>
+        <div class="xo-score-value" id="xScoreVal">0</div>
+      </div>
+      <div class="xo-score-card draw-score">
+        <div class="xo-score-label">Draw</div>
+        <div class="xo-score-value" id="drawScoreVal">0</div>
+      </div>
+      <div class="xo-score-card o-score">
+        <div class="xo-score-label">○ Player</div>
+        <div class="xo-score-value" id="oScoreVal">0</div>
+      </div>
+    </div>
+    <div class="xo-status" id="xoStatus">Player ✕ — your turn</div>
+    <div class="xo-board" id="xoBoard"></div>
+    <div class="xo-actions">
+      <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="xoResetScoreBtn">Reset</button>
+      <button class="btn" id="xoNewGameBtn">New Game 🎮</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     BOMB DUEL MODAL
+════════════════════════════════════════ -->
+<div id="bombDuelModal" class="bd-overlay hidden">
+  <div class="bd-card" id="bdCard">
+    <div class="bd-header">
+      <div class="bd-title">💣 Bomb Duel</div>
+      <button class="bd-close" id="bdCloseBtn">✕</button>
+    </div>
+    <div class="bd-players-bar">
+      <div class="bd-player-card" id="bdPlayerMe">
+        <div class="bd-pname" id="bdMyName">You</div>
+        <div class="bd-lives" id="bdMyLives">
+          <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+        </div>
+      </div>
+      <div class="bd-vs">VS</div>
+      <div class="bd-player-card" id="bdPlayerOp">
+        <div class="bd-pname" id="bdOpName">Opponent</div>
+        <div class="bd-lives" id="bdOpLives">
+          <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+        </div>
+      </div>
+    </div>
+    <div class="bd-status" id="bdStatus">Place 3 bombs on your grid</div>
+    <div class="bd-placing-hint" id="bdPlacingHint">Bombs placed: <span class="bd-bomb-counter" id="bdBombCount">0</span> / 3</div>
+    <div class="bd-grids-wrap">
+      <div class="bd-grid-section">
+        <div class="bd-grid-label">Your Grid</div>
+        <div class="bd-grid" id="bdMyGrid"></div>
+      </div>
+      <div class="bd-grid-section">
+        <div class="bd-grid-label">Opponent's Grid</div>
+        <div class="bd-grid" id="bdOpGrid"></div>
+      </div>
+    </div>
+    <div class="bd-actions" id="bdActions">
+      <button class="btn" id="bdReadyBtn">💣 I'm Ready!</button>
+    </div>
+    <div class="bd-winner-overlay hidden" id="bdWinnerOverlay">
+      <div class="bd-winner-text" id="bdWinnerText">🎉 Victory!</div>
+      <div class="bd-winner-sub" id="bdWinnerSub">Player wins!</div>
+      <div class="bd-winner-actions">
+        <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="bdExitBtn">Exit</button>
+        <button class="btn" id="bdRematchBtn">🔄 Rematch</button>
+      </div>
+    </div>
+    <div class="bd-left-banner hidden" id="bdLeftBanner">
+      <div class="bd-left-emoji">🚪</div>
+      <div class="bd-left-text" id="bdLeftText">Opponent left the duel</div>
+      <div class="bd-left-sub">They disconnected or closed the game. You can exit or wait for them to return.</div>
+      <div class="bd-winner-actions" style="margin-top:6px;">
+        <button class="btn" style="background:var(--panel-raised);border:1.5px solid var(--line);color:var(--muted);box-shadow:none;" id="bdLeftExitBtn">Exit</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1391,7 +1859,7 @@ const FIREBASE_CONFIG = {
           lastTs = lm.ts;
           if (lm.ct) {
             const t = await decrypt(chatId, lm.ct, lm.iv);
-            lastText = t.startsWith('data:image/') ? '🎨 Drawing sent!' : t;
+            lastText = t.startsWith('data:image/') ? '🎨 Drawing sent!' : t.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel Invite!' : t;
           }
         }
         return { chatId, friendUsername, friendDisplay, lastText, lastTs };
@@ -1532,9 +2000,22 @@ const FIREBASE_CONFIG = {
         } else {
           const mine = m.sender===me.username;
           row.className=`msg-row ${mine?'mine':'theirs'}${consec?' consecutive':''}`;
-          const body = text.startsWith('data:image/')
-            ? `<img src="${text}" class="msg-img" alt="Drawing">`
-            : `<span class="msg-text">${esc(text)}</span>`;
+          let body = '';
+          if (text.startsWith('data:image/')) {
+            body = `<img src="${text}" class="msg-img" alt="Drawing">`;
+          } else if (text.startsWith('[BOMB_DUEL_INVITE:') && text.endsWith(']')) {
+            const path = text.substring(18, text.length - 1);
+            body = `
+              <div class="bd-invite-card">
+                <div class="bd-invite-emoji">💣</div>
+                <div class="bd-invite-label">Bomb Duel Match</div>
+                <div class="bd-invite-sub">Tap join to duel in 3x3 grids!</div>
+                <button class="bd-invite-join-btn" onclick="window._bdJoinFromChat('${path}')">Join Duel</button>
+              </div>
+            `;
+          } else {
+            body = `<span class="msg-text">${esc(text)}</span>`;
+          }
           if (!consec && !mine) {
             const lbl = document.createElement('div');
             lbl.className='msg-sender-label';
@@ -1686,6 +2167,7 @@ const FIREBASE_CONFIG = {
     if (presTimer) clearInterval(presTimer);
     if (activeRef&&activeFn) { activeRef.off('value',activeFn); }
     if (me) db.ref(`presence/${me.username}`).update({online:false});
+    bdCleanup(true);
     me=null; activeChat=null;
     document.body.classList.remove('chat-open');
     showScreen('authScreen');
@@ -1913,8 +2395,8 @@ const FIREBASE_CONFIG = {
   }, {passive:false});
   canvas.addEventListener('touchend', () => painting=false);
 
-  // Open paint modal
-  document.getElementById('paintBtn').addEventListener('click', () => {
+  // Open paint modal (shared setup function)
+  function openPaintModal() {
     document.getElementById('drawingModal').classList.remove('hidden');
     // Init canvas with white background
     setCanvasBg('#FFFFFF');
@@ -1927,7 +2409,8 @@ const FIREBASE_CONFIG = {
     document.getElementById('brushSizeInput').value=6; brushSize=6;
     document.getElementById('sizeDot').style.width='6px'; document.getElementById('sizeDot').style.height='6px';
     document.getElementById('sizeDot').style.background=brushColor;
-  });
+  }
+  document.getElementById('paintBtn').addEventListener('click', openPaintModal);
   document.getElementById('drawingClose').addEventListener('click', () =>
     document.getElementById('drawingModal').classList.add('hidden')
   );
@@ -1968,23 +2451,23 @@ const FIREBASE_CONFIG = {
     const chatOpen = document.body.classList.contains('chat-open');
     const isMobile = window.innerWidth <= 768;
     if (!container || (isMobile && chatOpen)) return;
-    
+
     const bubble = document.createElement('div');
     bubble.className = 'floating-bubble';
-    
+
     const size = 30 + Math.random() * 50;
     bubble.style.width = size + 'px';
     bubble.style.height = size + 'px';
     bubble.style.left = (10 + Math.random() * 80) + '%';
-    
+
     const dur = 6 + Math.random() * 6;
     bubble.style.animationDuration = dur + 's';
-    
+
     bubble.addEventListener('click', (e) => {
       burstConfetti(e.clientX, e.clientY);
       bubble.remove();
     });
-    
+
     container.appendChild(bubble);
     setTimeout(() => { if(bubble.parentNode) bubble.remove(); }, dur * 1000);
   }
@@ -2053,6 +2536,657 @@ const FIREBASE_CONFIG = {
       await db.ref(`chats/${chatId}/messages/${selectedMsgId}`).remove();
     } catch(e) {
       console.error("Failed to delete for everyone", e);
+    }
+  });
+
+  // ================================================================
+  // KEBAB MENUS (Paint Modal + Chat Header)
+  // ================================================================
+  function wireKebab(btnId, menuId) {
+    const btn = document.getElementById(btnId);
+    const menu = document.getElementById(menuId);
+    if (!btn || !menu) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      // close any other open kebab menus first
+      document.querySelectorAll('.kebab-dropdown.open').forEach(m => { if (m!==menu) m.classList.remove('open'); });
+      document.querySelectorAll('.kebab-btn.open').forEach(b => { if (b!==btn) b.classList.remove('open'); });
+      const isOpen = menu.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+    });
+    menu.addEventListener('click', e => e.stopPropagation());
+  }
+  wireKebab('paintKebabBtn', 'paintKebabMenu');
+  wireKebab('chatKebabBtn', 'chatKebabMenu');
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.kebab-dropdown.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.kebab-btn.open').forEach(b => b.classList.remove('open'));
+  });
+
+  // Chat-header kebab menu actions
+  document.getElementById('kebabPaintOpen').addEventListener('click', () => {
+    document.getElementById('chatKebabMenu').classList.remove('open');
+    document.getElementById('chatKebabBtn').classList.remove('open');
+    openPaintModal();
+  });
+  document.getElementById('kebabXOGameChat').addEventListener('click', () => {
+    document.getElementById('chatKebabMenu').classList.remove('open');
+    document.getElementById('chatKebabBtn').classList.remove('open');
+    openXOModal();
+  });
+  document.getElementById('kebabBombDuelChat').addEventListener('click', () => {
+    document.getElementById('chatKebabMenu').classList.remove('open');
+    document.getElementById('chatKebabBtn').classList.remove('open');
+    if (!activeChat) { alert('Open a chat first to start a Bomb Duel! 💣'); return; }
+    bdCreateGame();
+  });
+
+  // ================================================================
+  // XO TIC-TAC-TOE GAME
+  // ================================================================
+  let xoBoard = Array(9).fill('');
+  let xoCurrentPlayer = 'X';
+  let xoGameOver = false;
+  let xoScores = { X: 0, O: 0, draw: 0 };
+  const XO_WIN_COMBOS = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function xoRenderBoard() {
+    const boardEl = document.getElementById('xoBoard');
+    boardEl.innerHTML = '';
+    xoBoard.forEach((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'xo-cell' + (val ? ' taken ' + (val==='X' ? 'x-mark' : 'o-mark') : '');
+      cell.textContent = val==='X' ? '✕' : val==='O' ? '○' : '';
+      cell.addEventListener('click', () => xoMakeMove(i));
+      boardEl.appendChild(cell);
+    });
+  }
+
+  function xoMakeMove(idx) {
+    if (xoGameOver || xoBoard[idx]) return;
+    xoBoard[idx] = xoCurrentPlayer;
+    xoRenderBoard();
+    const winner = xoCheckWinner();
+    const xName = me ? me.displayName : 'X Player';
+    const oName = activeChat ? activeChat.friendDisplay : 'O Player';
+    if (winner) {
+      xoGameOver = true;
+      xoScores[winner]++;
+      xoUpdateScoreboard();
+      xoHighlightWin(winner);
+      const winnerName = winner==='X' ? xName : oName;
+      const s = document.getElementById('xoStatus');
+      s.textContent = `🎉 ${winnerName} wins!`;
+      s.classList.add('highlight');
+      xoSpawnButterflies();
+      xoShowWinnerBanner(winnerName);
+      return;
+    }
+    if (xoBoard.every(c => c)) {
+      xoGameOver = true;
+      xoScores.draw++;
+      xoUpdateScoreboard();
+      const s = document.getElementById('xoStatus');
+      s.textContent = "🤝 It's a draw!";
+      s.classList.add('highlight');
+      return;
+    }
+    xoCurrentPlayer = xoCurrentPlayer==='X' ? 'O' : 'X';
+    const nextName = xoCurrentPlayer==='X' ? xName : oName;
+    document.getElementById('xoStatus').textContent = `${nextName} (${xoCurrentPlayer==='X'?'✕':'○'}) — your turn`;
+  }
+
+  function xoCheckWinner() {
+    for (const [a,b,c] of XO_WIN_COMBOS)
+      if (xoBoard[a] && xoBoard[a]===xoBoard[b] && xoBoard[a]===xoBoard[c]) return xoBoard[a];
+    return null;
+  }
+
+  function xoHighlightWin(winner) {
+    for (const [a,b,c] of XO_WIN_COMBOS) {
+      if (xoBoard[a]===winner && xoBoard[b]===winner && xoBoard[c]===winner) {
+        const cells = document.querySelectorAll('.xo-cell');
+        cells[a].classList.add('win-cell');
+        cells[b].classList.add('win-cell');
+        cells[c].classList.add('win-cell');
+        break;
+      }
+    }
+  }
+
+  function xoUpdateScoreboard() {
+    document.getElementById('xScoreVal').textContent = xoScores.X;
+    document.getElementById('oScoreVal').textContent = xoScores.O;
+    document.getElementById('drawScoreVal').textContent = xoScores.draw;
+  }
+
+  function xoNewGame() {
+    xoBoard = Array(9).fill('');
+    xoCurrentPlayer = 'X';
+    xoGameOver = false;
+    xoRenderBoard();
+    const xName = me ? me.displayName : 'X Player';
+    const s = document.getElementById('xoStatus');
+    s.textContent = `${xName} (✕) — your turn`;
+    s.classList.remove('highlight');
+    document.querySelectorAll('.xo-butterfly').forEach(el => el.remove());
+    const wb = document.querySelector('.xo-winner-banner');
+    if (wb) wb.remove();
+  }
+
+  function xoResetAll() {
+    xoScores = { X: 0, O: 0, draw: 0 };
+    xoUpdateScoreboard();
+    xoNewGame();
+  }
+
+  function openXOModal() {
+    document.getElementById('xoGameModal').classList.remove('hidden');
+    const xName = me ? me.displayName : 'X Player';
+    const oName = activeChat ? activeChat.friendDisplay : 'O Player';
+    document.querySelector('.xo-score-card.x-score .xo-score-label').textContent = `✕ ${xName}`;
+    document.querySelector('.xo-score-card.o-score .xo-score-label').textContent = `○ ${oName}`;
+    xoNewGame();
+  }
+
+  document.getElementById('kebabXOGame').addEventListener('click', () => {
+    document.getElementById('paintKebabMenu').classList.remove('open');
+    document.getElementById('paintKebabBtn').classList.remove('open');
+    openXOModal();
+  });
+  document.getElementById('xoCloseBtn').addEventListener('click', () =>
+    document.getElementById('xoGameModal').classList.add('hidden')
+  );
+  document.getElementById('xoNewGameBtn').addEventListener('click', xoNewGame);
+  document.getElementById('xoResetScoreBtn').addEventListener('click', xoResetAll);
+  document.getElementById('xoGameModal').addEventListener('click', e => {
+    if (e.target===document.getElementById('xoGameModal'))
+      document.getElementById('xoGameModal').classList.add('hidden');
+  });
+
+  // ── Butterfly winner animation ──
+  function xoSpawnButterflies() {
+    const card = document.querySelector('.xo-card');
+    if (!card) return;
+    const paths = ['bf-path-1','bf-path-2','bf-path-3'];
+    for (let i=0; i<10; i++) {
+      const bf = document.createElement('div');
+      bf.className = 'xo-butterfly ' + paths[i%3];
+      bf.innerHTML = `<span class="bf-wing">🦋</span>`;
+      bf.style.left = (15 + Math.random()*70) + '%';
+      bf.style.bottom = (5 + Math.random()*20) + '%';
+      bf.style.animationDelay = (Math.random()*1.5) + 's';
+      bf.style.fontSize = (22 + Math.random()*16) + 'px';
+      card.appendChild(bf);
+      bf.addEventListener('animationend', () => bf.remove());
+    }
+  }
+
+  function xoShowWinnerBanner(winnerName) {
+    const card = document.querySelector('.xo-card');
+    if (!card) return;
+    const old = card.querySelector('.xo-winner-banner');
+    if (old) old.remove();
+    const banner = document.createElement('div');
+    banner.className = 'xo-winner-banner';
+    banner.innerHTML = `
+      <div class="xo-wb-text">🎉 ${winnerName} Wins!</div>
+      <div class="xo-wb-sub">Tap "New Game 🎮" to play again</div>
+    `;
+    card.appendChild(banner);
+    banner.addEventListener('click', () => banner.remove());
+  }
+
+  // ================================================================
+  // BOMB DUEL MULTIPLAYER GAME
+  // ================================================================
+  let bdGameRef=null, bdGameId=null, bdListener=null;
+  let bdMyBombs=[], bdPhase='idle', bdMyRole='';
+  let bdOpponentDisplay='';
+  let bdLastMoveCount=0;
+  let bdPresenceRefs=[]; // {ref, fn} pairs for opponent-presence listeners during a match
+  let bdOpponentLeftShown=false;
+
+  function bdGenId() { return 'bd_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
+
+  async function bdCreateGame() {
+    if (!activeChat) return;
+    bdGameId = bdGenId();
+    const chatId = activeChat.chatId;
+    bdMyRole = 'player1';
+    bdOpponentDisplay = activeChat.friendDisplay;
+    const gameData = {
+      createdBy: me.username, chatId,
+      players: { player1: me.username, player2: '' },
+      playerNames: { [me.username]: me.displayName },
+      bombs: {}, ready: { player1: false, player2: false },
+      moves: [], lives: {}, turn: '',
+      phase: 'waiting_opponent', winner: null,
+      matchCount: 1, startingPlayer: 'player1', ts: Date.now(),
+      // presence flags: each player marks themself "connected" for this game,
+      // and we attach onDisconnect() hooks so a dropped connection is detected
+      // even if the tab is closed abruptly (not just a graceful "Exit").
+      connected: { [me.username]: true }
+    };
+    bdGameRef = db.ref(`bombDuel/${chatId}/${bdGameId}`);
+    await bdGameRef.set(gameData);
+    bdGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    await sendMsg(`[BOMB_DUEL_INVITE:${chatId}/${bdGameId}]`);
+    bdOpenModal();
+    bdStartListening(chatId, bdGameId);
+  }
+
+  async function bdJoinGame(fullPath) {
+    const parts = fullPath.split('/');
+    if (parts.length < 2) return;
+    const chatId = parts.slice(0,-1).join('/');
+    const gameId = parts[parts.length-1];
+    bdGameRef = db.ref(`bombDuel/${chatId}/${gameId}`);
+    const snap = await bdGameRef.get();
+    if (!snap.exists()) return alert('Game not found or expired.');
+    const data = snap.val();
+    if (data.phase==='finished') return alert('This game has already ended.');
+    if (data.players.player2 && data.players.player2!==me.username) return alert('This game is full.');
+    if (data.players.player2===me.username) bdMyRole='player2';
+    else if (data.players.player1===me.username) bdMyRole='player1';
+    else {
+      bdMyRole='player2';
+      await bdGameRef.child('players/player2').set(me.username);
+      await bdGameRef.child(`playerNames/${me.username}`).set(me.displayName);
+    }
+    bdGameId = gameId;
+    const opUser = bdMyRole==='player1' ? data.players.player2 : data.players.player1;
+    bdOpponentDisplay = (data.playerNames && data.playerNames[opUser]) || opUser;
+    if (data.phase==='waiting_opponent') await bdGameRef.child('phase').set('placing');
+    // Mark myself connected for this game, with an onDisconnect fallback
+    await bdGameRef.child(`connected/${me.username}`).set(true);
+    bdGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    bdOpenModal();
+    bdStartListening(chatId, gameId);
+  }
+
+  window._bdJoinFromChat = (fp) => bdJoinGame(fp);
+
+  function bdOpenModal() {
+    document.getElementById('bombDuelModal').classList.remove('hidden');
+    document.getElementById('bdWinnerOverlay').classList.add('hidden');
+    document.getElementById('bdLeftBanner').classList.add('hidden');
+    bdOpponentLeftShown = false;
+    bdMyBombs=[]; bdPhase='placing'; bdLastMoveCount=0;
+    bdRenderMyGrid(); bdRenderOpGrid_Disabled(); bdUpdateUI_Placing();
+    document.getElementById('bdMyName').textContent = me.displayName;
+    document.getElementById('bdOpName').textContent = bdOpponentDisplay || 'Waiting...';
+    bdUpdateLivesUI(3,3);
+  }
+
+  function bdStartListening(chatId, gameId) {
+    if (bdListener && bdGameRef) bdGameRef.off('value', bdListener);
+    bdClearPresenceWatchers();
+    bdGameRef = db.ref(`bombDuel/${chatId}/${gameId}`);
+    bdListener = bdGameRef.on('value', snap => { if (snap.exists()) bdOnGameUpdate(snap.val()); });
+  }
+
+  // Watch each seated opponent's live presence (from the global presence/ tree)
+  // so we can detect a hard disconnect (closed tab, lost network) even if they
+  // never got the chance to write connected:false themselves.
+  function bdClearPresenceWatchers() {
+    bdPresenceRefs.forEach(({ref, fn}) => ref.off('value', fn));
+    bdPresenceRefs = [];
+  }
+
+  function bdWatchOpponentPresence(opUsername) {
+    bdClearPresenceWatchers();
+    if (!opUsername) return;
+    const ref = db.ref(`presence/${opUsername}`);
+    const fn = ref.on('value', snap => {
+      if (bdPhase==='idle' || !bdGameRef) return;
+      const online = snap.exists() && snap.val().online;
+      if (!online) bdHandleOpponentLeft();
+    });
+    bdPresenceRefs.push({ref, fn});
+  }
+
+  function bdHandleOpponentLeft() {
+    if (bdOpponentLeftShown) return;
+    if (bdPhase==='idle') return;
+    // Only forfeit mid-match (placing/playing), not once already finished
+    const modalOpen = !document.getElementById('bombDuelModal').classList.contains('hidden');
+    if (!modalOpen) return;
+    bdOpponentLeftShown = true;
+    document.getElementById('bdLeftText').textContent = `${bdOpponentDisplay || 'Opponent'} left the duel`;
+    document.getElementById('bdLeftBanner').classList.remove('hidden');
+    document.getElementById('bdWinnerOverlay').classList.add('hidden');
+  }
+
+  function bdOnGameUpdate(data) {
+    if (!data) return;
+    const myU = me.username;
+    const isP1 = data.players.player1===myU;
+    bdMyRole = isP1 ? 'player1' : 'player2';
+    const opRole = isP1 ? 'player2' : 'player1';
+    const opU = data.players[opRole] || '';
+    if (opU && data.playerNames && data.playerNames[opU]) {
+      bdOpponentDisplay = data.playerNames[opU];
+      document.getElementById('bdOpName').textContent = bdOpponentDisplay;
+    } else if (opU) {
+      document.getElementById('bdOpName').textContent = opU;
+    } else {
+      document.getElementById('bdOpName').textContent = 'Waiting...';
+    }
+    document.getElementById('bdMyName').textContent = me.displayName;
+    const phase = data.phase; bdPhase = phase;
+
+    // Once an opponent is seated, watch their connection.
+    if (opU) bdWatchOpponentPresence(opU);
+
+    // Explicit "connected:false" write (graceful leave / onDisconnect fired)
+    if (opU && data.connected && data.connected[opU]===false && phase!=='finished') {
+      bdHandleOpponentLeft();
+    }
+
+    const myLives = data.lives?.[myU] ?? 3;
+    const opLives = data.lives?.[opU] ?? 3;
+    bdUpdateLivesUI(myLives, opLives);
+    const isMyTurn = data.turn===myU;
+    document.getElementById('bdPlayerMe').classList.toggle('active-turn', isMyTurn && phase==='playing');
+    document.getElementById('bdPlayerOp').classList.toggle('active-turn', !isMyTurn && phase==='playing');
+    if (phase==='waiting_opponent') {
+      bdUpdateStatus('Waiting for opponent to join...', '');
+      document.getElementById('bdPlacingHint').classList.add('hidden');
+      document.getElementById('bdActions').innerHTML = `<button class="btn" disabled>⏳ Waiting...</button>`;
+    } else if (phase==='placing') {
+      const myReady = data.ready?.[bdMyRole] || false;
+      if (myReady) {
+        bdUpdateStatus('Waiting for opponent to place bombs...', '');
+        document.getElementById('bdPlacingHint').classList.add('hidden');
+        document.getElementById('bdActions').innerHTML = `<button class="btn" disabled>✅ Ready!</button>`;
+      } else {
+        bdUpdateStatus('Place 3 bombs on your grid', '');
+        document.getElementById('bdPlacingHint').classList.remove('hidden');
+        document.getElementById('bdBombCount').textContent = bdMyBombs.length;
+        document.getElementById('bdActions').innerHTML = `<button class="btn" id="bdReadyBtn" ${bdMyBombs.length!==3?'disabled':''}>💣 I'm Ready!</button>`;
+        document.getElementById('bdReadyBtn')?.addEventListener('click', bdReady);
+      }
+      bdRenderMyGrid(); bdRenderOpGrid_Disabled();
+    } else if (phase==='playing') {
+      document.getElementById('bdPlacingHint').classList.add('hidden');
+      bdUpdateStatus(isMyTurn ? '🎯 Your turn — tap opponent grid!' : '⏳ Opponent choosing...', isMyTurn ? 'your-turn' : '');
+      document.getElementById('bdActions').innerHTML = '';
+      bdRenderMyGrid_Playing(data, myU);
+      bdRenderOpGrid_Playing(data, myU, opU, isMyTurn);
+      bdCheckForAnimation(data, myU);
+    } else if (phase==='finished') {
+      document.getElementById('bdPlacingHint').classList.add('hidden');
+      document.getElementById('bdLeftBanner').classList.add('hidden');
+      const winnerName = data.playerNames?.[data.winner] || data.winner;
+      bdShowVictory(winnerName, data.winner===myU);
+      document.getElementById('bdActions').innerHTML = '';
+      bdRenderMyGrid_Playing(data, myU);
+      bdRenderOpGrid_Playing(data, myU, opU, false);
+    }
+  }
+
+  function bdUpdateStatus(text, cls) {
+    const el = document.getElementById('bdStatus');
+    el.textContent = text;
+    el.className = 'bd-status' + (cls ? ' '+cls : '');
+  }
+
+  function bdUpdateLivesUI(myL, opL) {
+    const render = (id, lives) => {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      for (let i=0; i<3; i++) {
+        const s = document.createElement('span');
+        s.className = 'heart' + (i>=lives ? ' lost' : '');
+        s.textContent = '❤️';
+        el.appendChild(s);
+      }
+    };
+    render('bdMyLives', myL); render('bdOpLives', opL);
+  }
+
+  function bdUpdateUI_Placing() {
+    document.getElementById('bdPlacingHint').classList.remove('hidden');
+    document.getElementById('bdBombCount').textContent = bdMyBombs.length;
+    const btn = document.getElementById('bdReadyBtn');
+    if (btn) btn.disabled = bdMyBombs.length!==3;
+  }
+
+  function bdRenderMyGrid() {
+    const grid = document.getElementById('bdMyGrid');
+    grid.innerHTML = '';
+    for (let i=0; i<9; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'bd-cell' + (bdMyBombs.includes(i) ? ' bomb-placed' : '');
+      cell.addEventListener('click', () => bdToggleBomb(i));
+      grid.appendChild(cell);
+    }
+  }
+
+  function bdToggleBomb(idx) {
+    if (bdPhase!=='placing') return;
+    const pos = bdMyBombs.indexOf(idx);
+    if (pos>-1) bdMyBombs.splice(pos,1);
+    else if (bdMyBombs.length<3) bdMyBombs.push(idx);
+    bdRenderMyGrid(); bdUpdateUI_Placing();
+  }
+
+  function bdRenderOpGrid_Disabled() {
+    const grid = document.getElementById('bdOpGrid');
+    grid.innerHTML = '';
+    for (let i=0; i<9; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'bd-cell bd-cell-disabled';
+      grid.appendChild(cell);
+    }
+  }
+
+  function bdRenderMyGrid_Playing(data, myU) {
+    const grid = document.getElementById('bdMyGrid');
+    grid.innerHTML = '';
+    const myBombs = data.bombs?.[myU] || [];
+    const hitsOnMe = {};
+    (data.moves||[]).forEach(m => { if (m.target===myU) hitsOnMe[m.cell]=m.result; });
+    for (let i=0; i<9; i++) {
+      const cell = document.createElement('div');
+      if (hitsOnMe[i]) cell.className = 'bd-cell revealed ' + (hitsOnMe[i]==='bomb' ? 'revealed-bomb' : 'revealed-safe');
+      else if (myBombs.includes(i)) cell.className = 'bd-cell bomb-placed';
+      else cell.className = 'bd-cell bd-cell-disabled';
+      grid.appendChild(cell);
+    }
+  }
+
+  function bdRenderOpGrid_Playing(data, myU, opU, isMyTurn) {
+    const grid = document.getElementById('bdOpGrid');
+    grid.innerHTML = '';
+    const myHits = {};
+    (data.moves||[]).forEach(m => { if (m.by===myU && m.target===opU) myHits[m.cell]=m.result; });
+    for (let i=0; i<9; i++) {
+      const cell = document.createElement('div');
+      if (myHits[i]) cell.className = 'bd-cell revealed ' + (myHits[i]==='bomb' ? 'revealed-bomb' : 'revealed-safe');
+      else {
+        cell.className = 'bd-cell' + (!isMyTurn || data.phase==='finished' ? ' bd-cell-disabled' : '');
+        if (isMyTurn && data.phase==='playing') cell.addEventListener('click', () => bdAttack(i, opU));
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  async function bdReady() {
+    if (bdMyBombs.length!==3 || !bdGameRef) return;
+    await bdGameRef.child(`bombs/${me.username}`).set(bdMyBombs);
+    await bdGameRef.child(`ready/${bdMyRole}`).set(true);
+    // Use a transaction on the phase to avoid a race where both clients
+    // observe "not yet both ready" simultaneously and neither flips the phase.
+    await bdGameRef.child('phase').transaction(current => {
+      if (current !== 'placing') return current; // already advanced or not in placing
+      return current; // phase change happens below once both ready flags are confirmed
+    });
+    const snap = await bdGameRef.get();
+    const data = snap.val();
+    if (data.ready.player1 && data.ready.player2 && data.phase==='placing') {
+      const startU = data.players[data.startingPlayer||'player1'];
+      await bdGameRef.child('phase').transaction(current => {
+        if (current !== 'placing') return; // someone else already flipped it — abort
+        return 'playing';
+      });
+      await bdGameRef.update({
+        turn: startU,
+        [`lives/${data.players.player1}`]: 3,
+        [`lives/${data.players.player2}`]: 3
+      });
+    }
+  }
+
+  async function bdAttack(cellIdx, opU) {
+    if (!bdGameRef || bdPhase!=='playing') return;
+    const snap = await bdGameRef.get();
+    const data = snap.val();
+    if (data.turn!==me.username || data.phase!=='playing') return;
+    const alreadyHit = (data.moves||[]).some(m => m.by===me.username && m.target===opU && m.cell===cellIdx);
+    if (alreadyHit) return;
+    const opBombs = data.bombs?.[opU] || [];
+    const isBomb = opBombs.includes(cellIdx);
+    const result = isBomb ? 'bomb' : 'safe';
+    const moveIdx = (data.moves||[]).length;
+    const updates = {
+      [`moves/${moveIdx}`]: { by: me.username, target: opU, cell: cellIdx, result, ts: Date.now() },
+      turn: opU
+    };
+    if (isBomb) {
+      const myLives = (data.lives?.[me.username] ?? 3) - 1;
+      updates[`lives/${me.username}`] = myLives;
+      if (myLives<=0) { updates.phase='finished'; updates.winner=opU; }
+    }
+    await bdGameRef.update(updates);
+  }
+
+  function bdCheckForAnimation(data, myU) {
+    const moves = data.moves || [];
+    if (moves.length > bdLastMoveCount) {
+      const last = moves[moves.length-1];
+      bdLastMoveCount = moves.length;
+      if (last.result==='bomb') {
+        setTimeout(() => {
+          const gridId = last.by===myU ? 'bdOpGrid' : 'bdMyGrid';
+          const cells = document.getElementById(gridId)?.querySelectorAll('.bd-cell');
+          if (cells?.[last.cell]) bdShowExplosion(cells[last.cell]);
+          const card = document.getElementById('bdCard');
+          card.classList.add('shaking');
+          setTimeout(() => card.classList.remove('shaking'), 500);
+        }, 100);
+      }
+    } else { bdLastMoveCount = moves.length; }
+  }
+
+  function bdShowExplosion(cellEl) {
+    const ring = document.createElement('div');
+    ring.className = 'bd-explosion-ring';
+    cellEl.appendChild(ring);
+    setTimeout(() => ring.remove(), 700);
+    for (let i=0; i<6; i++) {
+      const smoke = document.createElement('div');
+      smoke.className = 'bd-smoke';
+      smoke.style.setProperty('--sx', (Math.random()*40-20)+'px');
+      smoke.style.setProperty('--sy', (-10-Math.random()*30)+'px');
+      smoke.style.left = (30+Math.random()*40)+'%';
+      smoke.style.top = (30+Math.random()*40)+'%';
+      smoke.style.animationDelay = (Math.random()*0.2)+'s';
+      cellEl.appendChild(smoke);
+      setTimeout(() => smoke.remove(), 1000);
+    }
+  }
+
+  function bdShowVictory(winnerName, iWon) {
+    const overlay = document.getElementById('bdWinnerOverlay');
+    document.getElementById('bdWinnerText').textContent = iWon ? '🎉 You Win!' : '💥 You Lost!';
+    document.getElementById('bdWinnerSub').textContent = `${winnerName} is victorious!`;
+    overlay.classList.remove('hidden');
+    const colors = ['#FF4757','#FF8C42','#FFD23F','#06D6A0','#26C6DA','#AB47BC','#FF4F9A','#7B61FF'];
+    for (let i=0; i<40; i++) {
+      const p = document.createElement('div');
+      p.className = 'bd-confetti';
+      p.style.left = Math.random()*100+'%'; p.style.top = '-10px';
+      p.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+      p.style.setProperty('--dur', (1.5+Math.random()*2)+'s');
+      p.style.setProperty('--sway', (0.5+Math.random()*0.8)+'s');
+      p.style.animationDelay = (Math.random()*1.5)+'s';
+      p.style.width = (5+Math.random()*5)+'px'; p.style.height = (5+Math.random()*5)+'px';
+      p.style.borderRadius = Math.random()>0.5?'50%':'2px';
+      overlay.appendChild(p);
+      p.addEventListener('animationend', () => p.remove());
+    }
+  }
+
+  async function bdRematch() {
+    if (!bdGameRef || !activeChat) return;
+    const snap = await bdGameRef.get();
+    const data = snap.val(); if (!data) return;
+    const newMatchCount = (data.matchCount||1)+1;
+    const newStarting = data.startingPlayer==='player1' ? 'player2' : 'player1';
+    const newId = bdGenId();
+    const chatId = data.chatId || activeChat.chatId;
+    const newGame = {
+      createdBy: me.username, chatId, players: data.players,
+      playerNames: data.playerNames||{}, bombs:{},
+      ready:{player1:false,player2:false}, moves:[],
+      lives:{}, turn:'', phase:'placing', winner:null,
+      matchCount:newMatchCount, startingPlayer:newStarting, ts:Date.now(),
+      connected: { [me.username]: true }
+    };
+    bdGameRef.off('value', bdListener);
+    bdClearPresenceWatchers();
+    bdGameId=newId;
+    bdGameRef=db.ref(`bombDuel/${chatId}/${newId}`);
+    await bdGameRef.set(newGame);
+    bdGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
+    bdMyBombs=[]; bdLastMoveCount=0;
+    bdOpenModal();
+    bdStartListening(chatId, newId);
+  }
+
+  function bdCleanup(skipPresenceWrite) {
+    if (bdGameRef && !skipPresenceWrite) {
+      // Graceful exit: tell the opponent we left, and cancel our onDisconnect hook
+      // (we're leaving on purpose, not by dropping connection).
+      try {
+        bdGameRef.child(`connected/${me.username}`).onDisconnect().cancel();
+        bdGameRef.child(`connected/${me.username}`).set(false);
+      } catch(e) {}
+    }
+    if (bdGameRef && bdListener) bdGameRef.off('value', bdListener);
+    bdClearPresenceWatchers();
+    bdGameRef=null; bdGameId=null; bdListener=null;
+    bdMyBombs=[]; bdPhase='idle'; bdLastMoveCount=0;
+    bdOpponentLeftShown=false;
+    document.getElementById('bombDuelModal').classList.add('hidden');
+  }
+
+  document.getElementById('kebabBombDuel').addEventListener('click', () => {
+    document.getElementById('paintKebabMenu').classList.remove('open');
+    document.getElementById('paintKebabBtn').classList.remove('open');
+    if (!activeChat) { alert('Open a chat first to start a Bomb Duel! 💣'); return; }
+    bdCreateGame();
+  });
+  document.getElementById('bdCloseBtn').addEventListener('click', () => bdCleanup(false));
+  document.getElementById('bombDuelModal').addEventListener('click', e => {
+    if (e.target===document.getElementById('bombDuelModal')) bdCleanup(false);
+  });
+  document.getElementById('bdCard').addEventListener('click', e => {
+    if (e.target.id==='bdRematchBtn' || e.target.closest?.('#bdRematchBtn')) bdRematch();
+    if (e.target.id==='bdExitBtn'    || e.target.closest?.('#bdExitBtn'))    bdCleanup(false);
+  });
+  document.getElementById('bdLeftExitBtn').addEventListener('click', () => bdCleanup(false));
+
+  // Handle the tab closing/reloading while a Bomb Duel is in progress.
+  window.addEventListener('beforeunload', () => {
+    if (bdGameRef && bdPhase!=='idle') {
+      try { bdGameRef.child(`connected/${me.username}`).set(false); } catch(e) {}
     }
   });
 
