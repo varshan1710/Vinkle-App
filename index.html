@@ -9,6 +9,7 @@
 <!-- Firebase SDK v10 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -423,6 +424,85 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 }
 .chat-unread-badge.show { display: flex; }
 
+/* ================================================================
+   CHAT LIST HEADER MENU (3-dot) + GROUP CHAT UI
+================================================================ */
+.chatlist-menu-wrap { position: relative; display: inline-block; flex-shrink: 0; }
+.chatlist-kebab-dropdown {
+  right: 0; left: auto; min-width: 200px;
+}
+.chat-item.select-mode { cursor: default; }
+.chat-item-checkbox {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  border: 2.5px solid var(--line); background: transparent;
+  display: none; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff; transition: all 0.15s ease;
+}
+.chat-item.select-mode .chat-item-checkbox { display: flex; }
+.chat-item.checked .chat-item-checkbox {
+  background: var(--btn-grad); border-color: transparent;
+}
+.selection-topbar {
+  display: none; align-items: center; gap: 10px;
+  padding: 12px 14px; border-bottom: 2px solid var(--line);
+  background: var(--panel-raised); flex-shrink: 0;
+}
+.selection-topbar.active { display: flex; }
+.selection-topbar .sel-count { flex: 1; font-family: var(--font-display); font-size: 14px; }
+.selection-topbar button {
+  border: none; border-radius: 50px; cursor: pointer;
+  font-family: var(--font-body); font-weight: 800; font-size: 12.5px;
+  padding: 8px 14px; transition: all 0.15s ease;
+}
+.selection-topbar .sel-cancel { background: transparent; color: var(--muted); }
+.selection-topbar .sel-cancel:hover { color: var(--text); }
+.selection-topbar .sel-delete { background: var(--red); color: #fff; }
+.selection-topbar .sel-delete:hover { transform: translateY(-1px); }
+.selection-topbar .sel-delete:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Member picker list (create group modal) */
+.member-picker-list {
+  max-height: 260px; overflow-y: auto; margin-top: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.member-picker-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 10px; border-radius: var(--radius-md);
+  cursor: pointer; transition: all 0.15s ease;
+  border: 2px solid transparent;
+}
+.member-picker-item:hover { background: var(--panel-hover); }
+.member-picker-item.picked {
+  background: rgba(171,71,188,0.12); border-color: var(--purple);
+}
+.member-picker-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 14px; color: #fff; position: relative; overflow: hidden;
+}
+.member-picker-info { flex: 1; min-width: 0; }
+.member-picker-name { font-family: var(--font-display); font-size: 13.5px; }
+.member-picker-user { font-size: 11px; color: var(--muted); font-weight: 700; }
+.member-picker-check {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  border: 2.5px solid var(--line); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; transition: all 0.15s ease;
+}
+.member-picker-item.picked .member-picker-check { background: var(--btn-grad); border-color: transparent; }
+.member-picker-empty { text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; padding: 20px 10px; }
+
+.group-avatar-wrap {
+  width: 92px; height: 92px; border-radius: 50%;
+  margin: 4px auto 16px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 30px; color: #fff;
+  box-shadow: 0 6px 24px rgba(123,97,255,0.4);
+  cursor: pointer; overflow: hidden;
+  background: var(--brand-grad);
+}
+.group-name-input { margin-top: 4px; }
+.group-members-count { font-size: 11.5px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+
 .sidebar-footer {
   padding: 12px 12px 16px;
   border-top: 2px solid var(--line);
@@ -511,6 +591,7 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   width: 42px; height: 42px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display); font-size: 17px; color: #fff; flex-shrink: 0;
+  position: relative; overflow: hidden;
 }
 .head-info { flex: 1; min-width: 0; }
 .head-name {
@@ -718,19 +799,137 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   display: flex; gap: 10px; align-items: flex-end;
   background: rgba(20,19,48,0.92); backdrop-filter: blur(14px); flex-shrink: 0;
 }
-.composer textarea {
-  flex: 1; resize: none; background: var(--panel-raised);
-  border: 2px solid var(--line); color: var(--text);
-  padding: 12px 16px; border-radius: 50px;
-  font-family: var(--font-body); font-size: 14.5px; font-weight: 600;
-  outline: none; max-height: 120px; line-height: 1.4;
+.composer-input-wrap {
+  flex: 1; display: flex; align-items: flex-end;
+  background: var(--panel-raised);
+  border: 2px solid var(--line);
+  border-radius: 24px;
+  padding: 0 4px 0 0;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative; min-width: 0;
 }
-.composer textarea:focus {
+.composer-input-wrap:focus-within {
   border-color: var(--purple);
   box-shadow: 0 0 0 4px rgba(171,71,188,0.15);
 }
+.composer textarea {
+  flex: 1; resize: none; background: transparent;
+  border: none; color: var(--text);
+  padding: 11px 8px 11px 14px; border-radius: 0;
+  font-family: var(--font-body); font-size: 14.5px; font-weight: 600;
+  outline: none; max-height: 140px; min-height: 42px; line-height: 1.45;
+  transition: height 0.15s ease;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.composer textarea::-webkit-scrollbar { width: 3px; }
+.composer textarea::-webkit-scrollbar-thumb { background: rgba(171,71,188,0.35); border-radius: 3px; }
+.composer textarea::-webkit-scrollbar-track { background: transparent; }
 .composer textarea::placeholder { color: var(--muted); font-size: 13.5px; }
+
+/* Attachment "+" button — WhatsApp-style */
+.attach-btn {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  border: none; cursor: pointer;
+  background: transparent; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; transition: all 0.18s ease;
+  margin-bottom: 1px; position: relative;
+}
+.attach-btn:hover { color: var(--purple); transform: rotate(90deg); }
+.attach-btn:active { transform: scale(0.88); }
+.attach-btn.open { color: var(--purple); transform: rotate(45deg); }
+
+/* Attachment popup menu */
+.attach-menu {
+  position: absolute; bottom: calc(100% + 12px); left: 0;
+  display: flex; gap: 18px; padding: 16px 22px;
+  background: var(--panel); border: 1.5px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(123,97,255,0.12);
+  opacity: 0; transform: translateY(8px) scale(0.92);
+  pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 50;
+}
+.attach-menu.open {
+  opacity: 1; transform: translateY(0) scale(1); pointer-events: all;
+}
+.attach-menu-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; border: none; background: none; color: var(--text);
+  font-family: var(--font-body); font-size: 11px; font-weight: 800;
+  transition: transform 0.15s ease;
+}
+.attach-menu-item:hover { transform: translateY(-3px); }
+.attach-menu-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transition: box-shadow 0.15s ease;
+}
+.attach-menu-item:hover .attach-menu-icon {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.attach-menu-icon.photos { background: linear-gradient(135deg, #AB47BC, #7B61FF); }
+.attach-menu-icon.videos { background: linear-gradient(135deg, #FF4F9A, #FF8C42); }
+.attach-menu-icon.files  { background: linear-gradient(135deg, #26C6DA, #06D6A0); }
+
+/* File message bubble */
+.msg-file-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 4px 2px; cursor: pointer;
+  text-decoration: none; min-width: 180px;
+}
+.msg-file-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.msg-row.mine .msg-file-icon { background: rgba(255,255,255,0.15); }
+.msg-row.theirs .msg-file-icon { background: rgba(255,255,255,0.08); border: 1.5px solid var(--line); }
+.msg-file-info { flex: 1; min-width: 0; }
+.msg-file-name {
+  font-size: 13px; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.msg-file-size { font-size: 10.5px; opacity: 0.7; font-weight: 700; margin-top: 1px; }
+
+/* Video message */
+.msg-video {
+  max-width: 100%; max-height: 270px; display: block;
+  border-radius: 14px; margin-bottom: 2px;
+  background: #0A0A1A;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+.msg-video:hover { border-color: var(--purple); }
+
+/* Upload progress overlay shown on the composer while uploading */
+.upload-progress-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; margin: 0 20px;
+  background: var(--panel-raised); border: 2px solid var(--line);
+  border-bottom: none; border-radius: var(--radius-md) var(--radius-md) 0 0;
+  animation: slideUp 0.15s ease; flex-shrink: 0;
+}
+.upload-progress-bar .upload-label {
+  flex: 1; font-size: 12.5px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.upload-progress-bar .upload-track {
+  flex: 1; height: 6px; border-radius: 10px; background: rgba(255,255,255,0.08);
+  overflow: hidden; min-width: 80px;
+}
+.upload-progress-bar .upload-fill {
+  height: 100%; border-radius: 10px; background: var(--btn-grad);
+  transition: width 0.2s ease; width: 0%;
+}
+.upload-progress-bar .upload-cancel-btn {
+  background: none; border: none; color: var(--muted); font-size: 15px;
+  cursor: pointer; padding: 4px 6px; flex-shrink: 0; border-radius: 6px;
+  transition: all 0.15s ease;
+}
+.upload-progress-bar .upload-cancel-btn:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
 .send-btn {
   width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
   border: none; cursor: pointer;
@@ -785,6 +984,143 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   border-radius: 8px; transition: all 0.15s ease;
 }
 .close-x:hover { color: var(--text); background: var(--panel-raised); transform: rotate(90deg); }
+
+/* ================================================================
+   PROFILE PICTURES + STATUS
+================================================================ */
+.avatar-photo-fill {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; object-position: center;
+  display: block; min-width: 0; min-height: 0; max-width: none;
+  flex-shrink: 0; pointer-events: none;
+}
+.me-avatar { cursor: pointer; }
+.me-avatar-badge {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--btn-grad); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; border: 2px solid var(--panel);
+  pointer-events: none;
+}
+.me-status-row {
+  font-size: 11px; color: var(--muted); margin-top: 1px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.profile-avatar-wrap {
+  width: 108px; height: 108px; border-radius: 50%;
+  margin: 4px auto 18px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 34px; color: #fff;
+  box-shadow: 0 6px 24px rgba(123,97,255,0.4);
+  cursor: pointer; overflow: hidden;
+}
+.profile-avatar-edit-badge {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--btn-grad); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; border: 3px solid var(--panel);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.profile-name-block { text-align: center; margin-bottom: 18px; }
+.profile-display-name { font-family: var(--font-display); font-size: 19px; }
+.profile-username-label { font-size: 12.5px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+
+.status-chip-label {
+  font-size: 10px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; margin-top: 6px;
+}
+.status-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.status-chip {
+  padding: 9px 14px; border-radius: 50px;
+  background: var(--panel-raised); border: 2px solid var(--line);
+  color: var(--text); font-size: 12.5px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s ease;
+  display: flex; align-items: center; gap: 6px;
+}
+.status-chip:hover { border-color: var(--purple); transform: translateY(-1px); }
+.status-chip.active {
+  background: var(--btn-grad); border-color: transparent; color: #fff;
+  box-shadow: var(--shadow-fun);
+}
+.profile-upload-spinner {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+}
+.head-status-label { font-weight: 700; }
+.head-avatar { cursor: pointer; }
+
+/* ================================================================
+   MESSAGE REACTIONS
+================================================================ */
+.msg-reactions {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
+}
+.msg-row.mine .msg-reactions { justify-content: flex-end; }
+.msg-row.theirs .msg-reactions { justify-content: flex-start; }
+.msg-reaction-pill {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--panel-raised); border: 1.5px solid var(--line);
+  border-radius: 20px; padding: 3px 9px; font-size: 12.5px;
+  cursor: pointer; transition: all 0.15s ease; line-height: 1.3;
+  font-family: var(--font-body);
+}
+.msg-reaction-pill:hover { border-color: var(--purple); transform: translateY(-1px); }
+.msg-reaction-pill.mine { background: rgba(171,71,188,0.28); border-color: var(--purple); }
+.msg-reaction-count { font-size: 10.5px; font-weight: 800; color: var(--muted); }
+.msg-reaction-pill.mine .msg-reaction-count { color: var(--text); }
+
+/* Quick-react row inside the message action sheet */
+.msg-action-reaction-row {
+  display: flex; justify-content: space-between; gap: 6px; margin-bottom: 16px;
+}
+.msg-action-emoji-btn {
+  font-size: 21px; background: var(--panel-raised); border: 2px solid var(--line);
+  border-radius: 50%; width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.msg-action-emoji-btn:hover { transform: scale(1.14); border-color: var(--purple); }
+.msg-action-emoji-btn.mine { background: rgba(171,71,188,0.28); border-color: var(--purple); }
+
+/* ================================================================
+   FRIENDSHIP METER + EQUIPPED BADGE (friend profile modal)
+================================================================ */
+.friendship-meter-block {
+  margin-top: 10px; text-align: left; background: var(--panel-raised);
+  border: 2px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px;
+}
+.friendship-meter-label-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 12.5px; font-weight: 900; margin-bottom: 9px; gap: 8px;
+}
+.friendship-meter-label-row .fm-title { color: var(--text); }
+.friendship-meter-streak { color: var(--muted); font-weight: 700; font-size: 11px; white-space: nowrap; }
+.friendship-meter-track {
+  width: 100%; height: 10px; border-radius: 20px;
+  background: rgba(255,255,255,0.08); overflow: hidden;
+}
+.friendship-meter-fill {
+  height: 100%; border-radius: 20px; width: 0%;
+  background: var(--btn-grad); transition: width 0.5s ease;
+}
+.friendship-meter-hint { margin-top: 8px; font-size: 11px; color: var(--muted); font-weight: 700; line-height: 1.4; }
+
+.friendship-badge-block { margin-top: 14px; text-align: left; }
+.friendship-badge-label {
+  font-size: 10px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px;
+}
+.friendship-badge-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel-raised); border: 2px solid var(--line);
+  border-radius: 50px; padding: 9px 16px;
+}
+.friendship-badge-emoji { font-size: 22px; line-height: 1; }
+.friendship-badge-name { font-weight: 800; font-size: 13.5px; }
 
 .friend-result {
   display: flex; align-items: center; gap: 13px;
@@ -965,6 +1301,7 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   #messages { padding: 14px 14px; }
   .chat-head { padding: 10px 12px; }
   .composer { padding: 8px 12px 14px; }
+  .attach-menu { left: -8px; }
   .paint-fab span { display: none; }
 }
 
@@ -1460,12 +1797,26 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   <div id="sidebar">
     <div class="sidebar-top">
       <div class="me-row">
-        <div class="me-avatar" id="meAvatar">?</div>
+        <div class="me-avatar" id="meAvatar" title="My Profile">
+          <span class="me-avatar-badge">📷</span>
+        </div>
         <div class="me-info">
           <div class="me-name" id="meDisplayName">—</div>
           <div class="me-username" id="meUsernameLabel">@—</div>
+          <div class="me-status-row" id="meStatusRow"></div>
         </div>
         <div class="me-actions">
+          <div class="kebab-menu-wrap chatlist-menu-wrap">
+            <button class="kebab-btn" id="chatListKebabBtn" title="More options">⋮</button>
+            <div class="kebab-dropdown chatlist-kebab-dropdown" id="chatListKebabMenu">
+              <button class="kebab-dropdown-item" id="menuCreateGroup">
+                <span class="kebab-icon">👥</span> Create Group Chat
+              </button>
+              <button class="kebab-dropdown-item" id="menuDeleteChat">
+                <span class="kebab-icon">🗑️</span> Delete Chat
+              </button>
+            </div>
+          </div>
           <button class="icon-btn" id="logoutBtn" title="Log out">🚪</button>
         </div>
       </div>
@@ -1473,6 +1824,12 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         <span class="search-icon">🔍</span>
         <input id="searchInput" type="text" placeholder="Search chats…">
       </div>
+    </div>
+
+    <div class="selection-topbar" id="selectionTopbar">
+      <span class="sel-count" id="selectionCount">0 selected</span>
+      <button class="sel-cancel" id="selectionCancelBtn">Cancel</button>
+      <button class="sel-delete" id="selectionDeleteBtn" disabled>🗑️ Delete</button>
     </div>
 
     <div class="chats-section-label">💬 Chats</div>
@@ -1500,6 +1857,7 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         <div class="head-info">
           <div class="head-name" id="headName">—</div>
           <div class="head-sub" id="headSub"></div>
+          <div class="head-sub" id="headStatus"></div>
         </div>
         <div class="head-actions">
           <button class="paint-fab" id="paintBtn">🎨 <span>Paint</span></button>
@@ -1529,10 +1887,35 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         </div>
         <button class="reply-preview-close" id="replyPreviewClose">✕</button>
       </div>
+      <div class="upload-progress-bar hidden" id="uploadProgressBar">
+        <span class="upload-label" id="uploadLabel">📎 Uploading…</span>
+        <div class="upload-track"><div class="upload-fill" id="uploadFill"></div></div>
+        <button class="upload-cancel-btn" id="uploadCancelBtn">✕</button>
+      </div>
       <div class="composer">
-        <textarea id="msgInput" rows="1" placeholder="Say something fun… 😄"></textarea>
+        <div class="composer-input-wrap">
+          <button class="attach-btn" id="attachBtn" title="Attach file">+</button>
+          <div class="attach-menu" id="attachMenu">
+            <button class="attach-menu-item" id="attachPhoto">
+              <div class="attach-menu-icon photos">📷</div>
+              Photos
+            </button>
+            <button class="attach-menu-item" id="attachVideo">
+              <div class="attach-menu-icon videos">🎥</div>
+              Videos
+            </button>
+            <button class="attach-menu-item" id="attachFile">
+              <div class="attach-menu-icon files">📄</div>
+              Files
+            </button>
+          </div>
+          <textarea id="msgInput" rows="1" placeholder="Say something fun… 😄"></textarea>
+        </div>
         <button class="send-btn" id="sendBtn">➤</button>
       </div>
+      <input type="file" id="attachPhotoInput" accept="image/*" multiple class="hidden">
+      <input type="file" id="attachVideoInput" accept="video/*" multiple class="hidden">
+      <input type="file" id="attachFileInput" accept="*/*" multiple class="hidden">
     </div>
   </div>
 
@@ -1551,6 +1934,91 @@ input::placeholder { color: #3A3870; font-weight: 600; }
     <button class="btn" id="friendSearchBtn">Find Friend 🔍</button>
     <div class="err-msg" id="friendSearchErr"></div>
     <div id="friendResult" class="hidden"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     CREATE GROUP CHAT MODAL
+════════════════════════════════════════ -->
+<div id="createGroupModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button class="close-x" id="createGroupClose">✕</button>
+    <div class="modal-title">👥 Create Group Chat</div>
+    <div class="modal-sub">Pick friends, give it a name & photo, and start vinkling together!</div>
+
+    <div class="group-avatar-wrap" id="groupAvatarWrap">
+      <span id="groupAvatarInitial">👥</span>
+    </div>
+    <input type="file" id="groupPhotoInput" accept="image/*" class="hidden">
+
+    <label class="group-name-input">Group Name</label>
+    <input id="groupNameInput" type="text" placeholder="e.g. Weekend Squad 🎉" maxlength="40" autocomplete="off">
+
+    <label style="margin-top:16px">Select Members</label>
+    <div class="member-picker-list" id="memberPickerList"></div>
+    <div class="group-members-count" id="groupMembersCount">0 selected</div>
+
+    <button class="btn" id="createGroupSubmitBtn">Create Group! 🎊</button>
+    <div class="err-msg" id="createGroupErr"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MY PROFILE MODAL
+════════════════════════════════════════ -->
+<div id="myProfileModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button class="close-x" id="myProfileClose">✕</button>
+    <div class="modal-title">👤 My Profile</div>
+    <div class="modal-sub" style="text-align:center;margin-bottom:2px">Tap your photo to change it</div>
+
+    <div class="profile-avatar-wrap" id="profileAvatarWrap">
+      <div class="profile-avatar-edit-badge">📷</div>
+    </div>
+    <input type="file" id="profilePhotoInput" accept="image/*" class="hidden">
+
+    <div class="profile-name-block">
+      <div class="profile-display-name" id="profileDisplayName">—</div>
+      <div class="profile-username-label" id="profileUsernameLabel">@—</div>
+    </div>
+
+    <div class="status-chip-label">My Status</div>
+    <div class="status-chip-row" id="statusChipRow"></div>
+    <div class="err-msg" id="profileErr"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     FRIEND PROFILE MODAL (WhatsApp-style — tap a friend's avatar in chat)
+════════════════════════════════════════ -->
+<div id="friendProfileModal" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:360px;">
+    <button class="close-x" id="friendProfileClose">✕</button>
+    <div class="profile-avatar-wrap" id="friendProfileAvatarWrap" style="cursor:default;"></div>
+
+    <div class="profile-name-block">
+      <div class="profile-display-name" id="friendProfileDisplayName">—</div>
+      <div class="profile-username-label" id="friendProfileUsernameLabel">@—</div>
+    </div>
+
+    <div class="friendship-meter-block">
+      <div class="friendship-meter-label-row">
+        <span class="fm-title">💞 Friendship Meter</span>
+        <span class="friendship-meter-streak" id="friendshipStreakLabel">0 day streak</span>
+      </div>
+      <div class="friendship-meter-track">
+        <div class="friendship-meter-fill" id="friendshipMeterFill"></div>
+      </div>
+      <div class="friendship-meter-hint" id="friendshipMeterHint"></div>
+    </div>
+
+    <div class="friendship-badge-block">
+      <div class="friendship-badge-label">🏅 Equipped Badge</div>
+      <div class="friendship-badge-chip">
+        <span class="friendship-badge-emoji" id="friendshipBadgeEmoji">🌱</span>
+        <span class="friendship-badge-name" id="friendshipBadgeName">New Vinkle</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1638,6 +2106,14 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 <div id="msgActionModal" class="modal-overlay hidden">
   <div class="modal-card" style="max-width:320px; text-align:center; padding:22px;">
     <div class="modal-title" style="margin-bottom:14px;">Message Options</div>
+    <div class="msg-action-reaction-row" id="msgActionReactionRow">
+      <button type="button" class="msg-action-emoji-btn" data-emoji="❤️">❤️</button>
+      <button type="button" class="msg-action-emoji-btn" data-emoji="😂">😂</button>
+      <button type="button" class="msg-action-emoji-btn" data-emoji="😮">😮</button>
+      <button type="button" class="msg-action-emoji-btn" data-emoji="😢">😢</button>
+      <button type="button" class="msg-action-emoji-btn" data-emoji="👍">👍</button>
+      <button type="button" class="msg-action-emoji-btn" data-emoji="🔥">🔥</button>
+    </div>
     <button class="btn" id="actionReplyBtn" style="background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">↩️ Reply</button>
     <button class="btn" id="actionEditBtn" style="margin-top:10px; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">✏️ Edit</button>
     <div class="err-msg" id="actionEditHint" style="display:none; margin-top:-4px; margin-bottom:10px;">Editing is only available within 15 minutes of sending.</div>
@@ -1866,6 +2342,44 @@ const FIREBASE_CONFIG = {
   }
 
   function esc(s) { const d=document.createElement('div'); d.textContent=String(s); return d.innerHTML; }
+
+  // ================================================================
+  // AVATAR RENDERING — single reusable helper for every avatar in the app.
+  // Renders a profile photo if present, otherwise falls back to the
+  // existing gradient+initials style. `el` keeps whatever CSS class/size
+  // it already had; this only touches background + inner content.
+  // ================================================================
+  function paintAvatar(el, { photoURL, seed, name } = {}) {
+    if (!el) return;
+    // Preserve any child elements that aren't the photo itself (e.g. the
+    // camera badge on #meAvatar, or the online-dot on .chat-avatar).
+    const keepers = Array.from(el.children).filter(c => !c.classList.contains('avatar-photo-fill'));
+    if (photoURL) {
+      el.style.background = 'transparent';
+      let img = el.querySelector('.avatar-photo-fill');
+      if (!img) {
+        img = document.createElement('img');
+        img.className = 'avatar-photo-fill';
+        el.insertBefore(img, el.firstChild);
+      }
+      img.src = photoURL;
+      el.childNodes.forEach(n => { if (n.nodeType===3) n.textContent=''; });
+    } else {
+      el.style.background = avatarGrad(seed);
+      const img = el.querySelector('.avatar-photo-fill');
+      if (img) img.remove();
+      // Set the initials as the element's own text (first text node),
+      // keeping any child badges/dots intact.
+      let textNode = Array.from(el.childNodes).find(n => n.nodeType === 3);
+      if (!textNode) {
+        textNode = document.createTextNode('');
+        el.insertBefore(textNode, el.firstChild);
+      }
+      textNode.textContent = initials(name);
+    }
+    keepers.forEach(k => { if (!el.contains(k)) el.appendChild(k); });
+  }
+
   function fmtTime(ts) { return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
   function fmtDate(ts) {
     const d=new Date(ts), now=new Date(), y=new Date(now);
@@ -1909,6 +2423,45 @@ const FIREBASE_CONFIG = {
   let myTypingActive = false, myTypingTimer = null;
   let presTimer = null;
   let db = null;
+
+  // Profile picture + status state
+  let myPhotoURL = '';
+  let myStatus = 'chatting';
+  let idleTimer = null;
+  let statusOverride = null;      // 'drawing' | 'xo' | 'bombduel' | null — a specific in-app activity
+  let friendProfileRef = null, friendProfileFn = null; // live listener for the open chat's friend
+  let myProfileRef = null, myProfileFn = null;          // live listener for my own profile doc
+  const profileListeners = {};    // username -> {ref, fn} for sidebar chat-list avatars
+  const STATUS_META = {
+    chatting: { emoji:'💬', label:'Chatting' },
+    playing_bombduel: { emoji:'🎮', label:'Playing Bomb Duel' },
+    playing_xo: { emoji:'❌', label:'Playing XO' },
+    drawing: { emoji:'🎨', label:'Drawing' },
+    away: { emoji:'😴', label:'Away' }
+  };
+  const IDLE_MS = 3 * 60 * 1000; // 3 minutes
+
+  // Reaction emoji palette (WhatsApp-style quick reactions)
+  const REACTION_EMOJIS = ['❤️','😂','😮','😢','👍','🔥'];
+
+  // Friendship Meter tiers — the equipped badge is simply the highest tier
+  // reached for that 1:1 chat's current streak.
+  const FRIENDSHIP_TIERS = [
+    { min: 0,  emoji: '🌱', label: 'New Vinkle' },
+    { min: 3,  emoji: '✨', label: 'Getting Close' },
+    { min: 7,  emoji: '🔥', label: 'Week Streak' },
+    { min: 14, emoji: '💜', label: 'Close Friends' },
+    { min: 30, emoji: '👑', label: 'Best Friends' },
+    { min: 60, emoji: '🌈', label: 'Soulmates' },
+  ];
+  function tierForStreak(streak) {
+    let cur = FRIENDSHIP_TIERS[0];
+    for (const t of FRIENDSHIP_TIERS) { if (streak >= t.min) cur = t; }
+    return cur;
+  }
+  function nextTierFor(streak) {
+    return FRIENDSHIP_TIERS.find(t => t.min > streak) || null;
+  }
 
   // Drawing state
   let painting=false, lastX=0, lastY=0;
@@ -1963,8 +2516,24 @@ const FIREBASE_CONFIG = {
       return new TextDecoder().decode(buf);
     } catch { return '🔒 [encrypted]'; }
   }
-  function b64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
-  function unb64(s) { return Uint8Array.from(atob(s), c=>c.charCodeAt(0)).buffer; }
+  function b64(buf) {
+    const bytes = new Uint8Array(buf);
+    const chunk = 0x8000; // 32KB chunks
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+  function unb64(s) {
+    const binary = atob(s);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
 
   async function hashPw(pw) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw+':vinkle-v1'));
@@ -2007,6 +2576,7 @@ const FIREBASE_CONFIG = {
       if (snap.exists()) return showErr(errEl, '❗ That username is taken. Try another!');
       const pwHash = await hashPw(password);
       await db.ref(`users/${username}`).set({ displayName: display, pwHash, createdAt: Date.now() });
+      await db.ref(`profiles/${username}`).set({ photoURL: '', status: 'chatting', statusTs: Date.now() });
       saveSession(username, display, password);
       await enterApp();
     } catch(e) {
@@ -2064,8 +2634,7 @@ const FIREBASE_CONFIG = {
   // ================================================================
   async function enterApp() {
     showScreen('mainScreen');
-    document.getElementById('meAvatar').textContent = initials(me.displayName);
-    document.getElementById('meAvatar').style.background = avatarGrad(me.username);
+    paintAvatar(document.getElementById('meAvatar'), { seed: me.username, name: me.displayName });
     document.getElementById('meDisplayName').textContent = me.displayName;
     document.getElementById('meUsernameLabel').textContent = '@' + me.username;
 
@@ -2074,12 +2643,34 @@ const FIREBASE_CONFIG = {
     presRef.onDisconnect().update({ online: false, ts: Date.now() });
     presTimer = setInterval(() => presRef.update({ online: true, ts: Date.now() }), 15000);
 
+    await ensureMyProfile();
+    try { listenMyProfile(); } catch(e) { console.error('listenMyProfile failed', e); }
+    try { initStatusSystem(); } catch(e) { console.error('initStatusSystem failed', e); }
+
     listenChats();
   }
 
   // ================================================================
   // CHATS LIST
   // ================================================================
+  // Cache of every 1:1 friend we've ever chatted with (username -> displayName),
+  // built up as the chat list renders. Used to populate the "Create Group"
+  // member picker without a separate friends system.
+  const knownFriends = {};
+
+  function getMsgPreview(t) {
+    if (t.startsWith('data:image/')) return '🎨 Drawing sent!';
+    if (t.startsWith('[PHOTO:')) return '📷 Photo';
+    if (t.startsWith('[VIDEO:')) return '🎥 Video';
+    if (t.startsWith('[FILE:')) {
+      const parts = t.substring(6, t.length - 1).split('|');
+      return `📄 ${parts[0] || 'File'}`;
+    }
+    if (t.startsWith('[BOMB_DUEL_INVITE:')) return '💣 Bomb Duel Invite!';
+    if (t.startsWith('[XO_INVITE:')) return '❌⭕ XO Game Invite!';
+    return t;
+  }
+
   function listenChats() {
     db.ref(`userChats/${me.username}`).on('value', async snap => {
       const data = snap.val() || {};
@@ -2087,6 +2678,32 @@ const FIREBASE_CONFIG = {
       const container = document.getElementById('chatsList');
 
       const chats = (await Promise.all(chatIds.map(async chatId => {
+        const entry = data[chatId] || {};
+
+        if (entry.isGroup) {
+          const [gSnap, mSnap] = await Promise.all([
+            db.ref(`groups/${chatId}`).get(),
+            db.ref(`chats/${chatId}/messages`).limitToLast(1).get()
+          ]);
+          if (!gSnap.exists()) return null; // group was deleted/removed
+          const g = gSnap.val();
+          let lastText='', lastTs=entry.updatedAt || g.createdAt || 0;
+          if (mSnap.exists()) {
+            const lm = Object.values(mSnap.val())[0];
+            lastTs = lm.ts;
+            if (lm.ct) {
+              const t = await decrypt(chatId, lm.ct, lm.iv);
+              lastText = getMsgPreview(t);
+              if (lastText && lm.sender) {
+                const who = lm.sender===me.username ? 'You' : (lm.senderDisplay || lm.sender);
+                lastText = `${who}: ${lastText}`;
+              }
+            }
+          }
+          const members = Object.keys(g.members || {});
+          return { chatId, isGroup: true, groupName: g.name || 'Group Chat', groupPhotoURL: g.photoURL || '', members, lastText, lastTs };
+        }
+
         const parts = chatId.split('__');
         const friendUsername = parts.find(p => p !== me.username);
         if (!friendUsername) return null;
@@ -2097,17 +2714,18 @@ const FIREBASE_CONFIG = {
         ]);
 
         const friendDisplay = uSnap.exists() ? uSnap.val().displayName : friendUsername;
-        let lastText='', lastTs=data[chatId].updatedAt || 0;
+        knownFriends[friendUsername] = friendDisplay;
+        let lastText='', lastTs=entry.updatedAt || 0;
 
         if (mSnap.exists()) {
           const lm = Object.values(mSnap.val())[0];
           lastTs = lm.ts;
           if (lm.ct) {
             const t = await decrypt(chatId, lm.ct, lm.iv);
-            lastText = t.startsWith('data:image/') ? '🎨 Drawing sent!' : t.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel Invite!' : t.startsWith('[XO_INVITE:') ? '❌⭕ XO Game Invite!' : t;
+            lastText = getMsgPreview(t);
           }
         }
-        return { chatId, friendUsername, friendDisplay, lastText, lastTs };
+        return { chatId, isGroup: false, friendUsername, friendDisplay, lastText, lastTs };
       }))).filter(Boolean).sort((a,b)=>b.lastTs-a.lastTs);
 
       container.innerHTML = '';
@@ -2116,11 +2734,20 @@ const FIREBASE_CONFIG = {
         container.innerHTML = `<div style="text-align:center;padding:36px 16px;color:var(--muted);font-size:14px;line-height:1.8;font-weight:600">
           No vinkles yet! 🌟<br>Tap <strong style="color:var(--text)">✨ Add a Friend</strong><br>to start chatting!
         </div>`;
+        exitSelectionMode();
         return;
       }
       const currentIds = new Set(chats.map(c => c.chatId));
       Object.keys(unreadListeners).forEach(id => { if (!currentIds.has(id)) clearUnreadListener(id); });
       chats.forEach(c => container.appendChild(buildChatItem(c)));
+      // Re-apply selection checkmarks / search filter after re-render.
+      if (selectionMode) applySelectionUI();
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      if (q) {
+        document.querySelectorAll('.chat-item').forEach(el => {
+          el.style.display = !el.textContent.toLowerCase().includes(q) ? 'none' : '';
+        });
+      }
     });
   }
 
@@ -2175,28 +2802,83 @@ const FIREBASE_CONFIG = {
     unreadListeners[chatId] = { msgsRef, msgsFn, readRef, readFn };
   }
 
-  function buildChatItem({ chatId, friendUsername, friendDisplay, lastText, lastTs }) {
+  function buildChatItem(c) {
+    const { chatId, lastText, lastTs } = c;
     const div = document.createElement('div');
     div.className = 'chat-item' + (activeChat && activeChat.chatId===chatId ? ' active' : '');
     div.setAttribute('data-chatid', chatId);
-    div.innerHTML = `
-      <div class="chat-avatar" style="background:${avatarGrad(friendUsername)}">
-        ${initials(friendDisplay)}
-        <span class="online-dot" id="odot_${friendUsername}"></span>
-      </div>
-      <div class="chat-preview">
-        <div class="chat-preview-name">${esc(friendDisplay)}</div>
-        <div class="chat-preview-msg">${esc(lastText||'Start a vinkle… 💬')}</div>
-      </div>
-      <div class="chat-preview-side">
-        <div class="chat-preview-time">${fmtSidebarTime(lastTs)}</div>
-        <span class="chat-unread-badge"></span>
-      </div>
-    `;
-    div.addEventListener('click', () => openChat(chatId, friendUsername, friendDisplay));
-    listenPresence(friendUsername);
-    watchUnreadCount(chatId, friendUsername);
+    if (c.isGroup) div.setAttribute('data-isgroup', '1');
+
+    if (c.isGroup) {
+      const avatarId = `cavatar_g_${chatId}`;
+      const memberCount = (c.members||[]).length;
+      div.innerHTML = `
+        <span class="chat-item-checkbox"></span>
+        <div class="chat-avatar" id="${avatarId}"></div>
+        <div class="chat-preview">
+          <div class="chat-preview-name">👥 ${esc(c.groupName)}</div>
+          <div class="chat-preview-msg">${esc(lastText || `${memberCount} members`)}</div>
+        </div>
+        <div class="chat-preview-side">
+          <div class="chat-preview-time">${fmtSidebarTime(lastTs)}</div>
+          <span class="chat-unread-badge"></span>
+        </div>
+      `;
+      paintAvatar(div.querySelector(`#${avatarId}`), { photoURL: c.groupPhotoURL, seed: chatId, name: c.groupName });
+      div.addEventListener('click', () => {
+        if (selectionMode) { toggleChatSelected(chatId, div); return; }
+        openGroupChat(chatId, c.groupName, c.groupPhotoURL, c.members);
+      });
+      watchGroupProfile(chatId);
+      watchUnreadCount(chatId);
+    } else {
+      const { friendUsername, friendDisplay } = c;
+      div.innerHTML = `
+        <span class="chat-item-checkbox"></span>
+        <div class="chat-avatar" id="cavatar_${friendUsername}">
+          <span class="online-dot" id="odot_${friendUsername}"></span>
+        </div>
+        <div class="chat-preview">
+          <div class="chat-preview-name">${esc(friendDisplay)}</div>
+          <div class="chat-preview-msg">${esc(lastText||'Start a vinkle… 💬')}</div>
+        </div>
+        <div class="chat-preview-side">
+          <div class="chat-preview-time">${fmtSidebarTime(lastTs)}</div>
+          <span class="chat-unread-badge"></span>
+        </div>
+      `;
+      paintAvatar(div.querySelector(`#cavatar_${friendUsername}`), { seed: friendUsername, name: friendDisplay });
+      div.addEventListener('click', () => {
+        if (selectionMode) { toggleChatSelected(chatId, div); return; }
+        openChat(chatId, friendUsername, friendDisplay);
+      });
+      listenPresence(friendUsername);
+      watchFriendProfile(friendUsername, friendDisplay);
+      watchUnreadCount(chatId, friendUsername);
+    }
     return div;
+  }
+
+  // Live-updates a group's avatar/name (sidebar) whenever the group doc changes.
+  const groupProfileListeners = {}; // chatId -> {ref, fn}
+  function watchGroupProfile(chatId) {
+    if (groupProfileListeners[chatId]) {
+      groupProfileListeners[chatId].ref.off('value', groupProfileListeners[chatId].fn);
+    }
+    const ref = db.ref(`groups/${chatId}`);
+    const fn = ref.on('value', snap => {
+      const g = snap.val();
+      if (!g) return;
+      const el = document.getElementById(`cavatar_g_${chatId}`);
+      if (el) paintAvatar(el, { photoURL: g.photoURL, seed: chatId, name: g.name });
+      const nameEl = document.querySelector(`.chat-item[data-chatid="${chatId}"] .chat-preview-name`);
+      if (nameEl) nameEl.textContent = `👥 ${g.name || 'Group Chat'}`;
+      if (activeChat && activeChat.chatId === chatId && activeChat.isGroup) {
+        paintAvatar(document.getElementById('headAvatar'), { photoURL: g.photoURL, seed: chatId, name: g.name });
+        document.getElementById('headName').textContent = g.name || 'Group Chat';
+      }
+    });
+    groupProfileListeners[chatId] = { ref, fn };
   }
 
 
@@ -2209,6 +2891,22 @@ const FIREBASE_CONFIG = {
     });
   }
 
+  // Live-updates a friend's avatar (sidebar chat list) whenever their
+  // profile photo changes, without needing a page reload. One listener per
+  // friend is kept around; re-registering on re-render just replaces it.
+  function watchFriendProfile(username, displayName) {
+    if (profileListeners[username]) {
+      profileListeners[username].ref.off('value', profileListeners[username].fn);
+    }
+    const ref = db.ref(`profiles/${username}`);
+    const fn = ref.on('value', snap => {
+      const p = snap.val() || {};
+      const el = document.getElementById(`cavatar_${username}`);
+      if (el) paintAvatar(el, { photoURL: p.photoURL, seed: username, name: displayName });
+    });
+    profileListeners[username] = { ref, fn };
+  }
+
   document.getElementById('searchInput').addEventListener('input', () => {
     const q = document.getElementById('searchInput').value.trim().toLowerCase();
     document.querySelectorAll('.chat-item').forEach(el => {
@@ -2217,10 +2915,245 @@ const FIREBASE_CONFIG = {
   });
 
   // ================================================================
+  // DELETE CHAT — multi-select mode in the sidebar chat list
+  // ================================================================
+  let selectionMode = false;
+  let selectedChatIds = new Set();
+
+  function enterSelectionMode() {
+    if (!document.querySelector('.chat-item')) return; // nothing to select
+    selectionMode = true;
+    selectedChatIds = new Set();
+    document.getElementById('chatsList').classList.add('selecting');
+    document.querySelectorAll('.chat-item').forEach(el => el.classList.add('select-mode'));
+    document.getElementById('selectionTopbar').classList.add('active');
+    updateSelectionCount();
+  }
+  function exitSelectionMode() {
+    selectionMode = false;
+    selectedChatIds = new Set();
+    document.querySelectorAll('.chat-item').forEach(el => {
+      el.classList.remove('select-mode');
+      el.classList.remove('checked');
+    });
+    document.getElementById('selectionTopbar').classList.remove('active');
+  }
+  function applySelectionUI() {
+    document.querySelectorAll('.chat-item').forEach(el => {
+      el.classList.add('select-mode');
+      el.classList.toggle('checked', selectedChatIds.has(el.getAttribute('data-chatid')));
+    });
+  }
+  function toggleChatSelected(chatId, el) {
+    if (selectedChatIds.has(chatId)) {
+      selectedChatIds.delete(chatId);
+      el.classList.remove('checked');
+    } else {
+      selectedChatIds.add(chatId);
+      el.classList.add('checked');
+    }
+    updateSelectionCount();
+  }
+  function updateSelectionCount() {
+    const n = selectedChatIds.size;
+    document.getElementById('selectionCount').textContent = n === 0 ? 'Select chats to delete' : `${n} selected`;
+    document.getElementById('selectionDeleteBtn').disabled = n === 0;
+  }
+  document.getElementById('selectionCancelBtn').addEventListener('click', exitSelectionMode);
+  document.getElementById('selectionDeleteBtn').addEventListener('click', async () => {
+    const ids = Array.from(selectedChatIds);
+    if (!ids.length) return;
+    const plural = ids.length > 1 ? 's' : '';
+    if (!confirm(`Delete ${ids.length} chat${plural}? This removes ${ids.length>1?'them':'it'} from your chat list. 🗑️`)) return;
+    const btn = document.getElementById('selectionDeleteBtn');
+    setLoading(btn, true);
+    try {
+      // "Delete Chat" removes the chat from MY list only (matches WhatsApp/
+      // Instagram semantics — it doesn't erase the conversation for other
+      // members). Group membership itself is untouched, so re-opening the
+      // group later (e.g. via a new invite) would work the same as before.
+      await Promise.all(ids.map(id => db.ref(`userChats/${me.username}/${id}`).remove()));
+      ids.forEach(id => { if (activeChat && activeChat.chatId === id) closeActiveChatPanel(); });
+    } catch(e) {
+      console.error('Delete chat failed', e);
+      alert('❗ Something went wrong deleting those chats.');
+    } finally {
+      setLoading(btn, false, '🗑️ Delete');
+      exitSelectionMode();
+    }
+  });
+
+  // Closes the open chat panel and returns to the empty state — used when
+  // the currently-open chat gets deleted out from under the user.
+  function closeActiveChatPanel() {
+    activeChat = null;
+    document.body.classList.remove('chat-open');
+    document.getElementById('activeChat').classList.add('hidden');
+    document.getElementById('activeChat').style.display = 'none';
+    document.getElementById('emptyState').classList.remove('hidden');
+    if (activeRef && activeFn) { activeRef.off('value', activeFn); activeRef=null; activeFn=null; }
+    if (typingRef && typingFn) { typingRef.off('value', typingFn); typingRef=null; typingFn=null; }
+    if (readRef && readFn) { readRef.off('value', readFn); readRef=null; readFn=null; }
+    if (friendProfileRef && friendProfileFn) { friendProfileRef.off('value', friendProfileFn); friendProfileRef=null; friendProfileFn=null; }
+    stopGroupPresenceWatchers();
+  }
+
+  // ================================================================
+  // CREATE GROUP CHAT
+  // ================================================================
+  let groupPickedMembers = new Set(); // usernames picked in the member picker
+  let groupPhotoDataURL = ''; // pending photo (data URL or storage URL) for the new group
+
+  function openCreateGroupModal() {
+    groupPickedMembers = new Set();
+    groupPhotoDataURL = '';
+    document.getElementById('groupNameInput').value = '';
+    clearErr(document.getElementById('createGroupErr'));
+    const wrap = document.getElementById('groupAvatarWrap');
+    wrap.style.background = 'var(--brand-grad)';
+    wrap.innerHTML = '<span id="groupAvatarInitial">👥</span>';
+    renderMemberPicker();
+    updateGroupMembersCount();
+    document.getElementById('createGroupModal').classList.remove('hidden');
+  }
+  function closeCreateGroupModal() {
+    document.getElementById('createGroupModal').classList.add('hidden');
+  }
+  document.getElementById('createGroupClose').addEventListener('click', closeCreateGroupModal);
+  document.getElementById('createGroupModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('createGroupModal')) closeCreateGroupModal();
+  });
+
+  function renderMemberPicker() {
+    const list = document.getElementById('memberPickerList');
+    const entries = Object.entries(knownFriends);
+    if (!entries.length) {
+      list.innerHTML = `<div class="member-picker-empty">Add a friend first, then come back to start a group! ✨</div>`;
+      return;
+    }
+    list.innerHTML = '';
+    entries.forEach(([username, displayName]) => {
+      const item = document.createElement('div');
+      item.className = 'member-picker-item' + (groupPickedMembers.has(username) ? ' picked' : '');
+      item.setAttribute('data-username', username);
+      item.innerHTML = `
+        <div class="member-picker-avatar" id="mpavatar_${username}"></div>
+        <div class="member-picker-info">
+          <div class="member-picker-name">${esc(displayName)}</div>
+          <div class="member-picker-user">@${esc(username)}</div>
+        </div>
+        <span class="member-picker-check">${groupPickedMembers.has(username) ? '✓' : ''}</span>
+      `;
+      paintAvatar(item.querySelector(`#mpavatar_${username}`), { seed: username, name: displayName });
+      item.addEventListener('click', () => {
+        if (groupPickedMembers.has(username)) groupPickedMembers.delete(username);
+        else groupPickedMembers.add(username);
+        item.classList.toggle('picked');
+        item.querySelector('.member-picker-check').textContent = groupPickedMembers.has(username) ? '✓' : '';
+        updateGroupMembersCount();
+      });
+      list.appendChild(item);
+    });
+  }
+  function updateGroupMembersCount() {
+    const n = groupPickedMembers.size;
+    document.getElementById('groupMembersCount').textContent = n === 0 ? '0 selected' : `${n} selected`;
+  }
+
+  // Group photo picker: tap avatar to choose an image, reusing the same
+  // square-crop pipeline as profile photos.
+  document.getElementById('groupAvatarWrap').addEventListener('click', () => {
+    document.getElementById('groupPhotoInput').click();
+  });
+  document.getElementById('groupPhotoInput').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const errEl = document.getElementById('createGroupErr');
+    if (!file.type.startsWith('image/')) return showErr(errEl, '❗ Please choose an image file.');
+    if (file.size > 6 * 1024 * 1024) return showErr(errEl, '❗ Image is too large (max 6MB).');
+    clearErr(errEl);
+    const wrap = document.getElementById('groupAvatarWrap');
+    const spinner = document.createElement('div');
+    spinner.className = 'profile-upload-spinner';
+    spinner.innerHTML = '<span class="spinner"></span>';
+    wrap.appendChild(spinner);
+    try {
+      const canvasEl = await cropToSquareCanvas(file);
+      groupPhotoDataURL = canvasEl.toDataURL('image/jpeg', 0.88);
+      wrap.style.background = 'transparent';
+      wrap.innerHTML = `<img src="${groupPhotoDataURL}" class="avatar-photo-fill" alt="Group photo">`;
+    } catch(err) {
+      console.error('Group photo processing failed', err);
+      showErr(errEl, '❗ Could not process that image.');
+    } finally {
+      spinner.remove();
+    }
+  });
+
+  document.getElementById('createGroupSubmitBtn').addEventListener('click', async () => {
+    const errEl = document.getElementById('createGroupErr'); clearErr(errEl);
+    const name = document.getElementById('groupNameInput').value.trim();
+    if (!name) return showErr(errEl, '❗ Please give your group a name.');
+    if (groupPickedMembers.size < 2) return showErr(errEl, '❗ Pick at least 2 friends for a group.');
+
+    const btn = document.getElementById('createGroupSubmitBtn');
+    setLoading(btn, true);
+    try {
+      const members = Array.from(groupPickedMembers);
+      members.push(me.username);
+      const chatId = 'group__' + db.ref('groups').push().key;
+      const ts = Date.now();
+
+      let photoURL = '';
+      if (groupPhotoDataURL) {
+        if (storage) {
+          try {
+            const blob = await (await fetch(groupPhotoDataURL)).blob();
+            const ref = storage.ref().child(`groupPhotos/${chatId}/${ts}.jpg`);
+            await ref.put(blob, { contentType: 'image/jpeg' });
+            photoURL = await ref.getDownloadURL();
+          } catch(e) {
+            console.warn('Group photo storage upload failed, using inline data URL', e);
+            photoURL = groupPhotoDataURL;
+          }
+        } else {
+          photoURL = groupPhotoDataURL;
+        }
+      }
+
+      const membersMap = {};
+      members.forEach(u => { membersMap[u] = true; });
+
+      await db.ref(`groups/${chatId}`).set({
+        name, photoURL, members: membersMap,
+        createdBy: me.username, createdAt: ts
+      });
+      await Promise.all(members.map(u =>
+        db.ref(`userChats/${u}/${chatId}`).set({ isGroup: true, updatedAt: ts })
+      ));
+
+      closeCreateGroupModal();
+      openGroupChat(chatId, name, photoURL, members);
+    } catch(e) {
+      console.error('Create group failed', e);
+      showErr(errEl, '❗ Something went wrong creating the group.');
+    } finally {
+      setLoading(btn, false, 'Create Group! 🎊');
+    }
+  });
+
+  // ================================================================
   // OPEN CHAT
   // ================================================================
+  const ACCENT_COLORS=['#FF4757','#FF8C42','#FFD23F','#06D6A0','#26C6DA','#AB47BC','#FF4F9A','#5C6BC0'];
+  function accentColorFor(username) {
+    let h=0; for(let c of (username||'u')) h=(h*31+c.charCodeAt(0))&0xFFFFFF;
+    return ACCENT_COLORS[Math.abs(h)%ACCENT_COLORS.length];
+  }
+
   async function openChat(chatId, friendUsername, friendDisplay) {
-    activeChat = { chatId, friendUsername, friendDisplay };
+    activeChat = { chatId, friendUsername, friendDisplay, isGroup: false };
     document.body.classList.add('chat-open');
     failedSends = {};
     clearReplyTarget();
@@ -2234,23 +3167,52 @@ const FIREBASE_CONFIG = {
     document.getElementById('activeChat').style.display = 'flex';
 
     // Assign a unique accent color based on friendUsername for the sender label
-    let h=0; for(let c of friendUsername) h=(h*31+c.charCodeAt(0))&0xFFFFFF;
-    const accentColors=['#FF4757','#FF8C42','#FFD23F','#06D6A0','#26C6DA','#AB47BC','#FF4F9A','#5C6BC0'];
-    const accentColor = accentColors[Math.abs(h)%accentColors.length];
+    const accentColor = accentColorFor(friendUsername);
 
-    document.getElementById('headAvatar').textContent = initials(friendDisplay);
-    document.getElementById('headAvatar').style.background = avatarGrad(friendUsername);
+    paintAvatar(document.getElementById('headAvatar'), { seed: friendUsername, name: friendDisplay });
     document.getElementById('headName').textContent = friendDisplay;
     document.getElementById('headSub').innerHTML = `<span style="color:var(--muted)">@${esc(friendUsername)}</span>`;
+    document.getElementById('headStatus').innerHTML = '';
     document.getElementById('messages').innerHTML = `<div style="display:flex;justify-content:center;padding:60px"><span class="spinner"></span></div>`;
-    document.getElementById('msgInput').focus();
+    const inp = document.getElementById('msgInput');
+    inp.value = '';
+    inp.style.height = 'auto';
+    inp.focus();
+
+    const attachMenu = document.getElementById('attachMenu');
+    const attachBtn = document.getElementById('attachBtn');
+    if (attachMenu) {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+    }
+    const bar = document.getElementById('uploadProgressBar');
+    if (bar) bar.classList.add('hidden');
+    if (typeof uploadTask !== 'undefined' && uploadTask) {
+      try { uploadTask.cancel(); } catch(e){}
+    }
 
     // Active accent color stored in dataset for the theirs sender label
     document.getElementById('activeChat').dataset.accentColor = accentColor;
 
+    stopGroupPresenceWatchers();
+
     db.ref(`presence/${friendUsername}`).on('value', snap => {
       lastKnownOnline = snap.exists() && snap.val().online && (Date.now()-snap.val().ts<35000);
       updateHeadSub(friendUsername);
+    });
+
+    // Friend's live profile (photo + active status) for this open chat.
+    if (friendProfileRef && friendProfileFn) friendProfileRef.off('value', friendProfileFn);
+    friendProfileRef = db.ref(`profiles/${friendUsername}`);
+    friendProfileFn = friendProfileRef.on('value', snap => {
+      const p = snap.val() || {};
+      const headAvatarEl = document.getElementById('headAvatar');
+      if (headAvatarEl) paintAvatar(headAvatarEl, { photoURL: p.photoURL, seed: friendUsername, name: friendDisplay });
+      const statusEl = document.getElementById('headStatus');
+      if (statusEl) {
+        const meta = STATUS_META[p.status] || STATUS_META.chatting;
+        statusEl.innerHTML = `<span class="head-status-label">${meta.emoji} ${esc(meta.label)}</span>`;
+      }
     });
 
     // Typing indicator (Instagram-style "... is typing"): listen for the
@@ -2275,6 +3237,104 @@ const FIREBASE_CONFIG = {
       updateTickMarks();
     });
 
+    subscribeMessages(chatId, () => accentColor);
+  }
+
+  // ================================================================
+  // OPEN GROUP CHAT
+  // ================================================================
+  async function openGroupChat(chatId, groupName, groupPhotoURL, members) {
+    activeChat = { chatId, isGroup: true, groupName, groupPhotoURL, members: members || [] };
+    document.body.classList.add('chat-open');
+    failedSends = {};
+    clearReplyTarget();
+
+    document.querySelectorAll('.chat-item').forEach(el =>
+      el.classList.toggle('active', el.getAttribute('data-chatid')===chatId)
+    );
+
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('activeChat').classList.remove('hidden');
+    document.getElementById('activeChat').style.display = 'flex';
+
+    paintAvatar(document.getElementById('headAvatar'), { photoURL: groupPhotoURL, seed: chatId, name: groupName });
+    document.getElementById('headName').textContent = groupName;
+    const memberCount = (members||[]).length;
+    document.getElementById('headSub').innerHTML = `<span style="color:var(--muted)">👥 ${memberCount} member${memberCount===1?'':'s'}</span>`;
+    document.getElementById('headStatus').innerHTML = '';
+    document.getElementById('messages').innerHTML = `<div style="display:flex;justify-content:center;padding:60px"><span class="spinner"></span></div>`;
+    const inp = document.getElementById('msgInput');
+    inp.value = '';
+    inp.style.height = 'auto';
+    inp.focus();
+
+    const attachMenu = document.getElementById('attachMenu');
+    const attachBtn = document.getElementById('attachBtn');
+    if (attachMenu) {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+    }
+    const bar = document.getElementById('uploadProgressBar');
+    if (bar) bar.classList.add('hidden');
+    if (typeof uploadTask !== 'undefined' && uploadTask) {
+      try { uploadTask.cancel(); } catch(e){}
+    }
+    document.getElementById('activeChat').dataset.accentColor = '';
+
+    // 1:1-only live listeners (presence/typing/read-receipts tied to a single
+    // friend) are torn down for groups — group chats support all core
+    // messaging features (send/reply/edit/delete/reactions/drawing/unread)
+    // without depending on a single counterpart's presence.
+    if (typingRef && typingFn) { typingRef.off('value', typingFn); typingRef = null; typingFn = null; }
+    if (readRef && readFn) { readRef.off('value', readFn); readRef = null; readFn = null; }
+    if (friendProfileRef && friendProfileFn) { friendProfileRef.off('value', friendProfileFn); friendProfileRef = null; friendProfileFn = null; }
+    friendIsTyping = false;
+    renderTypingBubble();
+
+    watchGroupTyping(chatId, members || []);
+
+    markChatRead(chatId);
+
+    subscribeMessages(chatId, (sender) => accentColorFor(sender));
+  }
+
+  // Live "X, Y are typing…" for group chats — watches every member's typing
+  // flag (skipping myself) instead of a single friend's.
+  let groupTypingRefs = [];
+  function watchGroupTyping(chatId, members) {
+    stopGroupPresenceWatchers();
+    const typingState = {}; // username -> bool
+    members.filter(u => u !== me.username).forEach(u => {
+      const ref = db.ref(`typing/${chatId}/${u}`);
+      const fn = ref.on('value', snap => {
+        const v = snap.val();
+        typingState[u] = !!(v && v.typing && (Date.now() - v.ts < 8000));
+        const typers = Object.keys(typingState).filter(k => typingState[k]);
+        friendIsTyping = typers.length > 0;
+        const el = document.getElementById('headSub');
+        if (el && activeChat && activeChat.chatId === chatId) {
+          if (typers.length) {
+            const names = typers.map(u2 => knownFriends[u2] || u2).join(', ');
+            el.innerHTML = `<span class="typing-label">${esc(names)} typing<span class="typing-dots"><span></span><span></span><span></span></span></span>`;
+          } else {
+            const memberCount = (members||[]).length;
+            el.innerHTML = `<span style="color:var(--muted)">👥 ${memberCount} member${memberCount===1?'':'s'}</span>`;
+          }
+        }
+        renderTypingBubble();
+      });
+      groupTypingRefs.push({ ref, fn });
+    });
+  }
+  function stopGroupPresenceWatchers() {
+    groupTypingRefs.forEach(({ref, fn}) => ref.off('value', fn));
+    groupTypingRefs = [];
+  }
+
+  // Shared message-thread subscription for both 1:1 and group chats.
+  // accentColorForSender(sender) lets group chats color each member's name
+  // label distinctly, while 1:1 chats keep their single accent color.
+  function subscribeMessages(chatId, accentColorForSender) {
     if (activeRef && activeFn) { activeRef.off('value', activeFn); }
 
     const ref = db.ref(`chats/${chatId}/messages`);
@@ -2312,6 +3372,7 @@ const FIREBASE_CONFIG = {
         if (m.ct) text = await decrypt(chatId, m.ct, m.iv);
         else if (m.text) text = m.text;
         textById[m.id] = text;
+        const accentColor = accentColorForSender(m.sender);
 
         const msgDate = new Date(m.ts).toDateString();
         if (msgDate !== lastDate) {
@@ -2334,10 +3395,33 @@ const FIREBASE_CONFIG = {
           row.className=`msg-row ${mine?'mine':'theirs'}${consec?' consecutive':''}`;
           let body = '';
           const isSpecialCard = text.startsWith('data:image/')
+            || (text.startsWith('[PHOTO:') && text.endsWith(']'))
+            || (text.startsWith('[VIDEO:') && text.endsWith(']'))
+            || (text.startsWith('[FILE:') && text.endsWith(']'))
             || (text.startsWith('[BOMB_DUEL_INVITE:') && text.endsWith(']'))
             || (text.startsWith('[XO_INVITE:') && text.endsWith(']'));
           if (text.startsWith('data:image/')) {
             body = `<img src="${text}" class="msg-img" alt="Drawing">`;
+          } else if (text.startsWith('[PHOTO:') && text.endsWith(']')) {
+            const url = text.substring(7, text.length - 1);
+            body = `<img src="${url}" class="msg-img" alt="Photo">`;
+          } else if (text.startsWith('[VIDEO:') && text.endsWith(']')) {
+            const url = text.substring(7, text.length - 1);
+            body = `<video src="${url}" class="msg-video" controls preload="metadata"></video>`;
+          } else if (text.startsWith('[FILE:') && text.endsWith(']')) {
+            const parts = text.substring(6, text.length - 1).split('|');
+            const name = parts[0];
+            const size = parts[1];
+            const url = parts.slice(2).join('|');
+            body = `
+              <a href="${url}" target="_blank" class="msg-file-card" download="${esc(name)}">
+                <div class="msg-file-icon">📄</div>
+                <div class="msg-file-info">
+                  <div class="msg-file-name">${esc(name)}</div>
+                  <div class="msg-file-size">${esc(size)}</div>
+                </div>
+              </a>
+            `;
           } else if (text.startsWith('[BOMB_DUEL_INVITE:') && text.endsWith(']')) {
             const path = text.substring(18, text.length - 1);
             body = `
@@ -2380,6 +3464,9 @@ const FIREBASE_CONFIG = {
             const liveText = textById[m.replyTo.id];
             const snippet = (liveText!==undefined ? liveText : (m.replyTo.snippet||'')) || '';
             const shortSnip = snippet.startsWith('data:image/') ? '📷 Photo'
+              : snippet.startsWith('[PHOTO:') ? '📷 Photo'
+              : snippet.startsWith('[VIDEO:') ? '🎥 Video'
+              : snippet.startsWith('[FILE:') ? '📄 Document'
               : snippet.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel invite'
               : snippet.startsWith('[XO_INVITE:') ? '❌⭕ XO Game invite'
               : snippet;
@@ -2393,6 +3480,27 @@ const FIREBASE_CONFIG = {
           bubble.innerHTML=`${replyHtml}${body}<div class="msg-meta">${editedTag}<span>${fmtTime(m.ts)}</span>${mine?'<span class="msg-tick">✓✓</span>':''}</div>`;
           row.appendChild(bubble);
 
+          // WhatsApp-style reactions, shown below the bubble. Grouped by
+          // emoji with a per-emoji count; the current user's own reaction
+          // (if any) is highlighted and can be tapped again to remove it.
+          if (m.reactions && Object.keys(m.reactions).length) {
+            const counts = {};
+            Object.entries(m.reactions).forEach(([u, emo]) => {
+              if (!counts[emo]) counts[emo] = { count: 0, mine: false };
+              counts[emo].count++;
+              if (u === me.username) counts[emo].mine = true;
+            });
+            const reactRow = document.createElement('div');
+            reactRow.className = 'msg-reactions';
+            reactRow.innerHTML = Object.entries(counts).map(([emo, info]) =>
+              `<button type="button" class="msg-reaction-pill${info.mine ? ' mine' : ''}" data-emoji="${esc(emo)}">${emo}<span class="msg-reaction-count">${info.count}</span></button>`
+            ).join('');
+            reactRow.querySelectorAll('.msg-reaction-pill').forEach(pill => {
+              pill.addEventListener('click', () => toggleReaction(chatId, m.id, pill.getAttribute('data-emoji')));
+            });
+            row.appendChild(reactRow);
+          }
+
           if (m.replyTo) {
             const q = bubble.querySelector('.msg-reply-quote');
             if (q) q.addEventListener('click', () => jumpToMessage(m.replyTo.id));
@@ -2404,7 +3512,7 @@ const FIREBASE_CONFIG = {
           const startPress = () => {
             pressMoved = false;
             pressTimer = setTimeout(() => {
-              if (!pressMoved) showMsgActionSheet(m.id, m.sender, m.ts, isSpecialCard);
+              if (!pressMoved) showMsgActionSheet(m.id, m.sender, m.ts, isSpecialCard, m.reactions);
             }, 550);
           };
           const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
@@ -2470,6 +3578,30 @@ const FIREBASE_CONFIG = {
   function markChatRead(chatId) {
     if (!me) return;
     db.ref(`lastRead/${chatId}/${me.username}`).set({ ts: Date.now() });
+  }
+
+  // ================================================================
+  // FRIENDSHIP METER — one shared streak per 1:1 chat, stored permanently
+  // at friendship/{chatId}. Grows by at most one day per calendar day, no
+  // matter how many messages are sent, so the meter builds gradually from
+  // an actual daily chat streak rather than message volume. A Firebase
+  // transaction keeps this safe even if both people message at once.
+  // ================================================================
+  function bumpFriendship(chatId) {
+    if (!chatId) return;
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    db.ref(`friendship/${chatId}`).transaction(cur => {
+      const rec = cur || { streak: 0, longestStreak: 0, lastDate: '' };
+      if (rec.lastDate === today) return rec; // already counted today
+      const newStreak = rec.lastDate === yesterday ? (rec.streak || 0) + 1 : 1;
+      return {
+        streak: newStreak,
+        longestStreak: Math.max(rec.longestStreak || 0, newStreak),
+        lastDate: today,
+        updatedTs: Date.now()
+      };
+    }).catch(e => console.error('bumpFriendship failed', e));
   }
 
   // Re-colors every one of my own tick marks already in the DOM based on
@@ -2599,6 +3731,9 @@ const FIREBASE_CONFIG = {
       if (!text && m.text) text = m.text;
       const display = m.sender===me.username ? 'Yourself' : (m.senderDisplay || m.sender);
       const shortSnip = text.startsWith('data:image/') ? '📷 Photo'
+        : text.startsWith('[PHOTO:') ? '📷 Photo'
+        : text.startsWith('[VIDEO:') ? '🎥 Video'
+        : text.startsWith('[FILE:') ? '📄 Document'
         : text.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel invite'
         : text.startsWith('[XO_INVITE:') ? '❌⭕ XO Game invite'
         : text;
@@ -2633,17 +3768,20 @@ const FIREBASE_CONFIG = {
   // "failed to send, tap to retry" indicator via failedSends.
   async function sendMsg(text, replyTo) {
     if (!text || !activeChat) return false;
-    const {chatId, friendUsername} = activeChat;
+    const {chatId, friendUsername, isGroup, members} = activeChat;
     try {
       const {ct, iv} = await withTimeout(encrypt(chatId, text), SEND_TIMEOUT_MS);
       const ts = Date.now();
       const payload = { sender: me.username, senderDisplay: me.displayName, ct, iv, ts };
       if (replyTo) payload.replyTo = replyTo;
       await withTimeout(db.ref(`chats/${chatId}/messages`).push(payload), SEND_TIMEOUT_MS);
-      await withTimeout(Promise.all([
-        db.ref(`userChats/${me.username}/${chatId}/updatedAt`).set(ts),
-        db.ref(`userChats/${friendUsername}/${chatId}/updatedAt`).set(ts)
-      ]), SEND_TIMEOUT_MS);
+      const recipients = isGroup ? (members || []) : [me.username, friendUsername];
+      await withTimeout(Promise.all(
+        recipients.map(u => db.ref(`userChats/${u}/${chatId}/updatedAt`).set(ts))
+      ), SEND_TIMEOUT_MS);
+      // Friendship Meter only applies to 1:1 chats. Fire-and-forget so it
+      // never slows down message sending.
+      if (!isGroup) bumpFriendship(chatId);
       return true;
     } catch (e) {
       console.error('sendMsg failed', e);
@@ -2661,12 +3799,15 @@ const FIREBASE_CONFIG = {
     const container = document.getElementById('messages');
     container.querySelectorAll('.msg-row.failed-local').forEach(el => el.remove());
     Object.entries(failedSends).forEach(([localId, item]) => {
+      // Nothing to show yet — message is still in flight and hasn't been
+      // marked as slow or failed, so don't render a "Not sent" row for it.
+      if (!item.timedOut && !item.failed) return;
       const row = document.createElement('div');
       row.className = 'msg-row mine failed failed-local';
       row.dataset.localid = localId;
       const bubble = document.createElement('div');
       bubble.className = 'msg-bubble';
-      bubble.innerHTML = `<span class="msg-text">${esc(item.text)}</span><div class="msg-meta"><span>${item.timedOut ? 'Taking too long' : 'Not sent'}</span></div>`;
+      bubble.innerHTML = `<span class="msg-text">${esc(getMsgPreview(item.text))}</span><div class="msg-meta"><span>${item.timedOut ? 'Taking too long' : 'Not sent'}</span></div>`;
       row.appendChild(bubble);
       const failRow = document.createElement('div');
       failRow.className = 'msg-failed-row';
@@ -2675,7 +3816,7 @@ const FIREBASE_CONFIG = {
       row.appendChild(failRow);
       container.appendChild(row);
     });
-    if (Object.keys(failedSends).length) container.scrollTop = container.scrollHeight;
+    if (Object.values(failedSends).some(i => i.timedOut || i.failed)) container.scrollTop = container.scrollHeight;
   }
 
   async function attemptSend(text, replyTo, localId) {
@@ -2691,6 +3832,7 @@ const FIREBASE_CONFIG = {
       renderFailedSends();
     } else if (failedSends[localId]) {
       failedSends[localId].timedOut = timedOut;
+      failedSends[localId].failed = true;
       renderFailedSends();
     }
   }
@@ -2699,6 +3841,7 @@ const FIREBASE_CONFIG = {
     const item = failedSends[localId];
     if (!item) return;
     item.timedOut = false;
+    item.failed = false;
     renderFailedSends();
     attemptSend(item.text, item.replyTo, localId);
   }
@@ -2712,9 +3855,7 @@ const FIREBASE_CONFIG = {
     const replyTo = activeReply ? { ...activeReply } : null;
     clearReplyTarget();
     const localId = 'local_' + (++failedSendSeq) + '_' + Date.now();
-    failedSends[localId] = { text: t, replyTo, timedOut: false };
-    // Optimistically show nothing extra yet — give the realtime listener a
-    // brief moment to deliver the real message before treating this as slow.
+    failedSends[localId] = { text: t, replyTo, timedOut: false, failed: false };
     attemptSend(t, replyTo, localId);
   });
   document.getElementById('msgInput').addEventListener('keydown', e => {
@@ -2722,10 +3863,244 @@ const FIREBASE_CONFIG = {
   });
   document.getElementById('msgInput').addEventListener('input', function() {
     this.style.height='auto';
-    this.style.height=Math.min(this.scrollHeight,120)+'px';
+    this.style.height=this.scrollHeight+'px';
     if (this.value.trim()) notifyTyping(); else stopTyping();
   });
   document.getElementById('msgInput').addEventListener('blur', stopTyping);
+
+  // ================================================================
+  // ATTACHMENTS & UPLOADS
+  // ================================================================
+  let uploadTask = null;
+
+  async function compressImage(file, maxSide = 800, quality = 0.6) {
+    let bitmap;
+    if (window.createImageBitmap) {
+      try { bitmap = await createImageBitmap(file); } catch(e) { bitmap = null; }
+    }
+    const source = bitmap || await fileToImageElement(file);
+    const width = bitmap ? bitmap.width : source.width;
+    const height = bitmap ? bitmap.height : source.height;
+
+    let targetWidth = width;
+    let targetHeight = height;
+    if (width > maxSide || height > maxSide) {
+      if (width > height) {
+        targetWidth = maxSide;
+        targetHeight = Math.round((height * maxSide) / width);
+      } else {
+        targetHeight = maxSide;
+        targetWidth = Math.round((width * maxSide) / height);
+      }
+    }
+
+    const canvasEl = document.createElement('canvas');
+    canvasEl.width = targetWidth;
+    canvasEl.height = targetHeight;
+    canvasEl.getContext('2d').drawImage(source, 0, 0, targetWidth, targetHeight);
+    if (bitmap && bitmap.close) bitmap.close();
+
+    return new Promise(resolve => {
+      canvasEl.toBlob(blob => {
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', quality);
+    });
+  }
+
+  async function handleAttachmentUpload(file, type) {
+    if (!activeChat) return;
+    const { chatId } = activeChat;
+    const ts = Date.now();
+    const cleanName = file.name.replace(/[|\]\[]/g, '_');
+
+    let uploadFile = file;
+    if (type === 'photo') {
+      try {
+        uploadFile = await compressImage(file);
+      } catch (e) {
+        console.warn('Image compression failed, using original', e);
+      }
+    }
+
+    const sizeStr = formatBytes(uploadFile.size);
+    showUploadProgress(true, `Uploading ${cleanName}…`);
+
+    let mediaURL = '';
+    if (storage) {
+      try {
+        const storageRef = storage.ref().child(`chatAttachments/${chatId}/${ts}_${cleanName}`);
+        uploadTask = storageRef.put(uploadFile);
+
+        const promise = new Promise((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              updateUploadProgressPercent(progress);
+            },
+            (error) => {
+              reject(error);
+            },
+            async () => {
+              try {
+                const downloadURL = await storageRef.getDownloadURL();
+                resolve(downloadURL);
+              } catch (e) {
+                reject(e);
+              }
+            }
+          );
+        });
+
+        mediaURL = await promise;
+      } catch (err) {
+        console.error('Storage upload failed, trying fallback', err);
+        if (err.code === 'storage/canceled') {
+          showUploadProgress(false);
+          return;
+        }
+        try {
+          mediaURL = await fileToDataURL(uploadFile);
+        } catch (e) {
+          showUploadProgress(false);
+          alert('Upload failed: ' + err.message);
+          return;
+        }
+      }
+    } else {
+      try {
+        updateUploadProgressPercent(30);
+        mediaURL = await fileToDataURL(uploadFile);
+        updateUploadProgressPercent(100);
+      } catch (e) {
+        showUploadProgress(false);
+        alert('Could not read file.');
+        return;
+      }
+    }
+
+    showUploadProgress(false);
+
+    let msgText = '';
+    if (type === 'photo') {
+      msgText = `[PHOTO:${mediaURL}]`;
+    } else if (type === 'video') {
+      msgText = `[VIDEO:${mediaURL}]`;
+    } else {
+      msgText = `[FILE:${cleanName}|${sizeStr}|${mediaURL}]`;
+    }
+
+    await sendMsg(msgText);
+  }
+
+  function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function formatBytes(bytes, decimals = 1) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  function showUploadProgress(show, label = 'Uploading…') {
+    const bar = document.getElementById('uploadProgressBar');
+    if (!bar) return;
+    if (show) {
+      document.getElementById('uploadLabel').textContent = label;
+      document.getElementById('uploadFill').style.width = '0%';
+      bar.classList.remove('hidden');
+    } else {
+      bar.classList.add('hidden');
+      uploadTask = null;
+    }
+  }
+
+  function updateUploadProgressPercent(pct) {
+    const fill = document.getElementById('uploadFill');
+    if (fill) {
+      fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    }
+  }
+
+  // Cancel running upload
+  document.getElementById('uploadCancelBtn').addEventListener('click', () => {
+    if (uploadTask) {
+      try {
+        uploadTask.cancel();
+      } catch (e) {
+        console.error('Cancel failed', e);
+      }
+    }
+    showUploadProgress(false);
+  });
+
+  // Attachment menu toggle & actions
+  const attachBtn = document.getElementById('attachBtn');
+  const attachMenu = document.getElementById('attachMenu');
+  if (attachBtn && attachMenu) {
+    attachBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = attachMenu.classList.toggle('open');
+      attachBtn.classList.toggle('open', isOpen);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!attachMenu.contains(e.target) && e.target !== attachBtn) {
+        attachMenu.classList.remove('open');
+        attachBtn.classList.remove('open');
+      }
+    });
+
+    document.getElementById('attachPhoto').addEventListener('click', () => {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+      document.getElementById('attachPhotoInput').click();
+    });
+
+    document.getElementById('attachVideo').addEventListener('click', () => {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+      document.getElementById('attachVideoInput').click();
+    });
+
+    document.getElementById('attachFile').addEventListener('click', () => {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+      document.getElementById('attachFileInput').click();
+    });
+
+    document.getElementById('attachPhotoInput').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      e.target.value = '';
+      for (const file of files) {
+        await handleAttachmentUpload(file, 'photo');
+      }
+    });
+
+    document.getElementById('attachVideoInput').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      e.target.value = '';
+      for (const file of files) {
+        await handleAttachmentUpload(file, 'video');
+      }
+    });
+
+    document.getElementById('attachFileInput').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      e.target.value = '';
+      for (const file of files) {
+        await handleAttachmentUpload(file, 'file');
+      }
+    });
+  }
 
   // ================================================================
   // BACK BUTTON
@@ -2737,7 +4112,22 @@ const FIREBASE_CONFIG = {
     if (activeRef&&activeFn) { activeRef.off('value',activeFn); activeRef=null; activeFn=null; }
     if (typingRef&&typingFn) { typingRef.off('value',typingFn); typingRef=null; typingFn=null; }
     if (readRef&&readFn) { readRef.off('value',readFn); readRef=null; readFn=null; }
+    if (friendProfileRef&&friendProfileFn) { friendProfileRef.off('value',friendProfileFn); friendProfileRef=null; friendProfileFn=null; }
+    stopGroupPresenceWatchers();
     friendIsTyping=false; friendLastRead=0;
+
+    const attachMenu = document.getElementById('attachMenu');
+    const attachBtn = document.getElementById('attachBtn');
+    if (attachMenu) {
+      attachMenu.classList.remove('open');
+      attachBtn.classList.remove('open');
+    }
+    const bar = document.getElementById('uploadProgressBar');
+    if (bar) bar.classList.add('hidden');
+    if (typeof uploadTask !== 'undefined' && uploadTask) {
+      try { uploadTask.cancel(); } catch(e){}
+    }
+
     document.getElementById('activeChat').classList.add('hidden');
     document.getElementById('emptyState').classList.remove('hidden');
     document.querySelectorAll('.chat-item').forEach(el=>el.classList.remove('active'));
@@ -2810,6 +4200,12 @@ const FIREBASE_CONFIG = {
     localStorage.removeItem('vinkle_me_v1');
     if (presTimer) clearInterval(presTimer);
     if (activeRef&&activeFn) { activeRef.off('value',activeFn); }
+    if (friendProfileRef&&friendProfileFn) { friendProfileRef.off('value',friendProfileFn); friendProfileRef=null; friendProfileFn=null; }
+    if (myProfileRef&&myProfileFn) { myProfileRef.off('value',myProfileFn); myProfileRef=null; myProfileFn=null; }
+    Object.keys(profileListeners).forEach(u => { profileListeners[u].ref.off('value', profileListeners[u].fn); delete profileListeners[u]; });
+    Object.keys(groupProfileListeners).forEach(id => { groupProfileListeners[id].ref.off('value', groupProfileListeners[id].fn); delete groupProfileListeners[id]; });
+    stopGroupPresenceWatchers();
+    stopStatusSystem();
     if (me) db.ref(`presence/${me.username}`).update({online:false});
     bdCleanup(true);
     me=null; activeChat=null;
@@ -3053,19 +4449,21 @@ const FIREBASE_CONFIG = {
     document.getElementById('brushSizeInput').value=6; brushSize=6;
     document.getElementById('sizeDot').style.width='6px'; document.getElementById('sizeDot').style.height='6px';
     document.getElementById('sizeDot').style.background=brushColor;
+    enterActivityStatus('drawing');
+  }
+  function closePaintModal() {
+    document.getElementById('drawingModal').classList.add('hidden');
+    exitActivityStatus('drawing');
   }
   document.getElementById('paintBtn').addEventListener('click', openPaintModal);
-  document.getElementById('drawingClose').addEventListener('click', () =>
-    document.getElementById('drawingModal').classList.add('hidden')
-  );
+  document.getElementById('drawingClose').addEventListener('click', () => closePaintModal());
   document.getElementById('drawingModal').addEventListener('click', e => {
-    if(e.target===document.getElementById('drawingModal'))
-      document.getElementById('drawingModal').classList.add('hidden');
+    if(e.target===document.getElementById('drawingModal')) closePaintModal();
   });
 
   document.getElementById('sendDrawingBtn').addEventListener('click', async () => {
     if (!activeChat) return;
-    document.getElementById('drawingModal').classList.add('hidden');
+    closePaintModal();
     const btn = document.getElementById('sendBtn');
     burstConfetti(btn.getBoundingClientRect().x, btn.getBoundingClientRect().y);
     await sendMsg(canvas.toDataURL('image/png'));
@@ -3138,13 +4536,18 @@ const FIREBASE_CONFIG = {
   let actionSheetSender = null;
   let actionSheetTs = null;
 
-  function showMsgActionSheet(msgId, sender, ts, isSpecialCard) {
+  function showMsgActionSheet(msgId, sender, ts, isSpecialCard, reactions) {
     actionSheetMsgId = msgId;
     actionSheetSender = sender;
     actionSheetTs = ts;
     const isMine = sender === me.username;
     const withinEditWindow = (Date.now() - ts) <= EDIT_WINDOW_MS;
     const canEdit = isMine && !isSpecialCard;
+
+    const myCurrentReaction = (reactions && me) ? reactions[me.username] : null;
+    document.querySelectorAll('.msg-action-emoji-btn').forEach(btn => {
+      btn.classList.toggle('mine', btn.getAttribute('data-emoji') === myCurrentReaction);
+    });
 
     document.getElementById('actionEditBtn').classList.toggle('hidden', !canEdit);
     document.getElementById('actionEditHint').style.display = 'none';
@@ -3163,6 +4566,38 @@ const FIREBASE_CONFIG = {
   document.getElementById('msgActionModal').addEventListener('click', e => {
     if (e.target === document.getElementById('msgActionModal')) hideMsgActionSheet();
   });
+
+  // ── Quick-react row: tap an emoji to react; tap it again to remove ──
+  document.querySelectorAll('.msg-action-emoji-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!actionSheetMsgId || !activeChat) return hideMsgActionSheet();
+      const emoji = btn.getAttribute('data-emoji');
+      const chatId = activeChat.chatId;
+      const msgId = actionSheetMsgId;
+      hideMsgActionSheet();
+      await toggleReaction(chatId, msgId, emoji);
+    });
+  });
+
+  // ================================================================
+  // MESSAGE REACTIONS — toggle my reaction on a message. Tapping the same
+  // emoji I already reacted with removes it; tapping a different one
+  // switches to it (a user can only have one active reaction per message).
+  // ================================================================
+  async function toggleReaction(chatId, msgId, emoji) {
+    if (!me || !chatId || !msgId || !emoji) return;
+    const ref = db.ref(`chats/${chatId}/messages/${msgId}/reactions/${me.username}`);
+    try {
+      const snap = await ref.get();
+      if (snap.exists() && snap.val() === emoji) {
+        await ref.remove();
+      } else {
+        await ref.set(emoji);
+      }
+    } catch (e) {
+      console.error('toggleReaction failed', e);
+    }
+  }
 
   document.getElementById('actionReplyBtn').addEventListener('click', async () => {
     if (!actionSheetMsgId || !activeChat) return hideMsgActionSheet();
@@ -3302,6 +4737,7 @@ const FIREBASE_CONFIG = {
   }
   wireKebab('paintKebabBtn', 'paintKebabMenu');
   wireKebab('chatKebabBtn', 'chatKebabMenu');
+  wireKebab('chatListKebabBtn', 'chatListKebabMenu');
   document.addEventListener('click', () => {
     document.querySelectorAll('.kebab-dropdown.open').forEach(m => m.classList.remove('open'));
     document.querySelectorAll('.kebab-btn.open').forEach(b => b.classList.remove('open'));
@@ -3317,13 +4753,27 @@ const FIREBASE_CONFIG = {
     document.getElementById('chatKebabMenu').classList.remove('open');
     document.getElementById('chatKebabBtn').classList.remove('open');
     if (!activeChat) { alert('Open a chat first to start an XO Game! ❌⭕'); return; }
+    if (activeChat.isGroup) { alert('XO Game is only available in 1:1 chats for now. ❌⭕'); return; }
     xoCreateGame();
   });
   document.getElementById('kebabBombDuelChat').addEventListener('click', () => {
     document.getElementById('chatKebabMenu').classList.remove('open');
     document.getElementById('chatKebabBtn').classList.remove('open');
     if (!activeChat) { alert('Open a chat first to start a Bomb Duel! 💣'); return; }
+    if (activeChat.isGroup) { alert('Bomb Duel is only available in 1:1 chats for now. 💣'); return; }
     bdCreateGame();
+  });
+
+  // Chat-list (sidebar) 3-dot menu actions
+  document.getElementById('menuCreateGroup').addEventListener('click', () => {
+    document.getElementById('chatListKebabMenu').classList.remove('open');
+    document.getElementById('chatListKebabBtn').classList.remove('open');
+    openCreateGroupModal();
+  });
+  document.getElementById('menuDeleteChat').addEventListener('click', () => {
+    document.getElementById('chatListKebabMenu').classList.remove('open');
+    document.getElementById('chatListKebabBtn').classList.remove('open');
+    enterSelectionMode();
   });
 
   // ================================================================
@@ -3411,6 +4861,7 @@ const FIREBASE_CONFIG = {
     document.getElementById('xoMyLabel').textContent = `✕ ${me.displayName}`;
     document.getElementById('xoOpLabel').textContent = `○ ${xoOpponentDisplay || 'Waiting...'}`;
     xoRenderBoard(Array(9).fill(''), true);
+    enterActivityStatus('xo');
   }
 
   function xoStartListening(chatId, gameId) {
@@ -3762,12 +5213,14 @@ const FIREBASE_CONFIG = {
     xoPhase='idle'; xoLastMoveCount=0;
     xoOpponentLeftShown=false;
     document.getElementById('xoGameModal').classList.add('hidden');
+    exitActivityStatus('xo');
   }
 
   document.getElementById('kebabXOGame').addEventListener('click', () => {
     document.getElementById('paintKebabMenu').classList.remove('open');
     document.getElementById('paintKebabBtn').classList.remove('open');
     if (!activeChat) { alert('Open a chat first to start an XO Game! ❌⭕'); return; }
+    if (activeChat.isGroup) { alert('XO Game is only available in 1:1 chats for now. ❌⭕'); return; }
     xoCreateGame();
   });
   document.getElementById('xoCloseBtn').addEventListener('click', () => xoCleanup(false));
@@ -3889,6 +5342,7 @@ const FIREBASE_CONFIG = {
     document.getElementById('bdMyName').textContent = me.displayName;
     document.getElementById('bdOpName').textContent = bdOpponentDisplay || 'Waiting...';
     bdUpdateLivesUI(3,3);
+    enterActivityStatus('bombduel');
   }
 
   function bdStartListening(chatId, gameId) {
@@ -4377,12 +5831,14 @@ const FIREBASE_CONFIG = {
     bdMyBombs=[]; bdPhase='idle'; bdLastMoveCount=0;
     bdOpponentLeftShown=false;
     document.getElementById('bombDuelModal').classList.add('hidden');
+    exitActivityStatus('bombduel');
   }
 
   document.getElementById('kebabBombDuel').addEventListener('click', () => {
     document.getElementById('paintKebabMenu').classList.remove('open');
     document.getElementById('paintKebabBtn').classList.remove('open');
     if (!activeChat) { alert('Open a chat first to start a Bomb Duel! 💣'); return; }
+    if (activeChat.isGroup) { alert('Bomb Duel is only available in 1:1 chats for now. 💣'); return; }
     bdCreateGame();
   });
   document.getElementById('bdCloseBtn').addEventListener('click', () => bdCleanup(false));
@@ -4408,11 +5864,309 @@ const FIREBASE_CONFIG = {
   });
 
   // ================================================================
+  // 👤 PROFILE PICTURES + ACTIVE STATUS
+  // ================================================================
+  // Everything in this block is wrapped defensively: it must never be able
+  // to throw and prevent BOOT (below) from running, since that would leave
+  // the user stuck on a blank screen with no login shown.
+  let storage = null;
+  try {
+    // Firebase Storage is only usable if a real storageBucket was configured
+    // AND the storage SDK actually loaded. Otherwise every upload falls back
+    // to a base64 data URL stored directly in Realtime Database, so the
+    // feature works end-to-end either way.
+    const STORAGE_CONFIGURED = !!(FIREBASE_CONFIG.storageBucket && !FIREBASE_CONFIG.storageBucket.includes('YOUR'));
+    if (STORAGE_CONFIGURED && firebase.storage) {
+      storage = firebase.storage();
+    }
+  } catch(e) { console.warn('Storage unavailable, falling back to base64', e); storage = null; }
+
+  // Create /profiles/{username} with sensible defaults if it doesn't exist
+  // yet — covers older accounts created before this feature existed.
+  async function ensureMyProfile() {
+    try {
+      const snap = await db.ref(`profiles/${me.username}`).get();
+      if (!snap.exists()) {
+        await db.ref(`profiles/${me.username}`).set({ photoURL: '', status: 'chatting', statusTs: Date.now() });
+      }
+    } catch(e) { console.error('ensureMyProfile failed', e); }
+  }
+
+  function listenMyProfile() {
+    if (myProfileRef && myProfileFn) myProfileRef.off('value', myProfileFn);
+    myProfileRef = db.ref(`profiles/${me.username}`);
+    myProfileFn = myProfileRef.on('value', snap => {
+      const p = snap.val() || {};
+      myPhotoURL = p.photoURL || '';
+      myStatus = p.status || 'chatting';
+      paintAvatar(document.getElementById('meAvatar'), { photoURL: myPhotoURL, seed: me.username, name: me.displayName });
+      const row = document.getElementById('meStatusRow');
+      if (row) {
+        const meta = STATUS_META[myStatus] || STATUS_META.chatting;
+        row.textContent = `${meta.emoji} ${meta.label}`;
+      }
+      // Keep the My Profile modal's avatar + status chips in sync if it's open.
+      if (!document.getElementById('myProfileModal').classList.contains('hidden')) {
+        paintAvatar(document.getElementById('profileAvatarWrap'), { photoURL: myPhotoURL, seed: me.username, name: me.displayName });
+        renderStatusChips();
+      }
+    });
+  }
+
+  async function setMyStatus(status) {
+    if (!me) return;
+    myStatus = status;
+    try { await db.ref(`profiles/${me.username}`).update({ status, statusTs: Date.now() }); }
+    catch(e) { console.error('setMyStatus failed', e); }
+  }
+
+  // ── Automatic status detection ──
+  // Default "Chatting" on login; idle after 3 minutes of no input anywhere
+  // on the page; back to "Chatting" (or whatever specific activity is
+  // running) on the next interaction.
+  function initStatusSystem() {
+    statusOverride = null;
+    setMyStatus('chatting');
+    resetIdleTimer();
+    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(evt =>
+      window.addEventListener(evt, onUserActivity, { passive: true })
+    );
+  }
+  function stopStatusSystem() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = null;
+    statusOverride = null;
+    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(evt =>
+      window.removeEventListener(evt, onUserActivity)
+    );
+  }
+  function onUserActivity() {
+    if (!me) return;
+    if (myStatus === 'away') {
+      setMyStatus(statusOverride ? statusForOverride(statusOverride) : 'chatting');
+    }
+    resetIdleTimer();
+  }
+  function resetIdleTimer() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (me) setMyStatus('away'); }, IDLE_MS);
+  }
+  function statusForOverride(o) {
+    if (o === 'drawing') return 'drawing';
+    if (o === 'xo') return 'playing_xo';
+    if (o === 'bombduel') return 'playing_bombduel';
+    return 'chatting';
+  }
+  // Called when a specific in-app activity (paint/XO/Bomb Duel) opens or
+  // closes, so the auto status reflects it — without touching "Away".
+  function enterActivityStatus(activity) {
+    statusOverride = activity;
+    if (myStatus !== 'away') setMyStatus(statusForOverride(activity));
+  }
+  function exitActivityStatus(activity) {
+    if (statusOverride !== activity) return; // a different activity took over meanwhile
+    statusOverride = null;
+    if (myStatus !== 'away') setMyStatus('chatting');
+  }
+
+  // ── My Profile modal ──
+  function renderStatusChips() {
+    const row = document.getElementById('statusChipRow');
+    if (!row) return;
+    row.innerHTML = Object.keys(STATUS_META).map(key => {
+      const meta = STATUS_META[key];
+      const active = key === myStatus ? ' active' : '';
+      return `<button type="button" class="status-chip${active}" data-status="${key}">${meta.emoji} ${esc(meta.label)}</button>`;
+    }).join('');
+    row.querySelectorAll('.status-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        statusOverride = null; // manual pick clears any in-app activity override
+        setMyStatus(btn.getAttribute('data-status'));
+      });
+    });
+  }
+
+  function openMyProfileModal() {
+    document.getElementById('profileDisplayName').textContent = me.displayName;
+    document.getElementById('profileUsernameLabel').textContent = '@' + me.username;
+    paintAvatar(document.getElementById('profileAvatarWrap'), { photoURL: myPhotoURL, seed: me.username, name: me.displayName });
+    clearErr(document.getElementById('profileErr'));
+    renderStatusChips();
+    document.getElementById('myProfileModal').classList.remove('hidden');
+  }
+  function closeMyProfileModal() {
+    document.getElementById('myProfileModal').classList.add('hidden');
+  }
+
+  // ================================================================
+  // FRIEND PROFILE MODAL — WhatsApp-style profile page opened by tapping
+  // a friend's avatar in an open 1:1 chat. Shows their photo/name plus the
+  // Friendship Meter and its equipped achievement badge for this chat.
+  // ================================================================
+  function renderFriendshipMeter(streak) {
+    const tier = tierForStreak(streak);
+    const next = nextTierFor(streak);
+    const pct = next ? Math.round(((streak - tier.min) / (next.min - tier.min)) * 100) : 100;
+    document.getElementById('friendshipStreakLabel').textContent =
+      `🔥 ${streak} day${streak === 1 ? '' : 's'} streak`;
+    document.getElementById('friendshipMeterFill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    document.getElementById('friendshipMeterHint').textContent = next
+      ? `${next.min - streak} more day${(next.min - streak) === 1 ? '' : 's'} of chatting to unlock ${next.emoji} ${next.label}`
+      : `Max level reached — you two are inseparable! 🎉`;
+    document.getElementById('friendshipBadgeEmoji').textContent = tier.emoji;
+    document.getElementById('friendshipBadgeName').textContent = tier.label;
+  }
+
+  async function openFriendProfileModal(chatId, username, displayName) {
+    if (!username) return;
+    document.getElementById('friendProfileDisplayName').textContent = displayName || username;
+    document.getElementById('friendProfileUsernameLabel').textContent = '@' + username;
+    paintAvatar(document.getElementById('friendProfileAvatarWrap'), { seed: username, name: displayName });
+    renderFriendshipMeter(0);
+    document.getElementById('friendProfileModal').classList.remove('hidden');
+
+    try {
+      const profSnap = await db.ref(`profiles/${username}`).get();
+      const p = profSnap.val() || {};
+      paintAvatar(document.getElementById('friendProfileAvatarWrap'), { photoURL: p.photoURL, seed: username, name: displayName });
+    } catch (e) { console.error('Friend profile photo load failed', e); }
+
+    try {
+      const fSnap = await db.ref(`friendship/${chatId}`).get();
+      const f = fSnap.val() || { streak: 0 };
+      renderFriendshipMeter(f.streak || 0);
+    } catch (e) { console.error('Friendship meter load failed', e); }
+  }
+  function closeFriendProfileModal() {
+    document.getElementById('friendProfileModal').classList.add('hidden');
+  }
+  try {
+    document.getElementById('friendProfileClose').addEventListener('click', closeFriendProfileModal);
+    document.getElementById('friendProfileModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('friendProfileModal')) closeFriendProfileModal();
+    });
+    // Tapping a friend's avatar in an open 1:1 chat opens their profile page.
+    document.getElementById('headAvatar').addEventListener('click', () => {
+      if (!activeChat || activeChat.isGroup) return;
+      openFriendProfileModal(activeChat.chatId, activeChat.friendUsername, activeChat.friendDisplay);
+    });
+  } catch (e) { console.error('Friend profile modal wiring failed', e); }
+
+  try {
+    document.getElementById('meAvatar').addEventListener('click', openMyProfileModal);
+    document.getElementById('myProfileClose').addEventListener('click', closeMyProfileModal);
+    document.getElementById('myProfileModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('myProfileModal')) closeMyProfileModal();
+    });
+
+    // ── Upload flow: Storage if configured, else base64 fallback ──
+    document.getElementById('profileAvatarWrap').addEventListener('click', () => {
+      document.getElementById('profilePhotoInput').click();
+    });
+    document.getElementById('profilePhotoInput').addEventListener('change', async e => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        return showErr(document.getElementById('profileErr'), '❗ Please choose an image file.');
+      }
+      if (file.size > 6 * 1024 * 1024) {
+        return showErr(document.getElementById('profileErr'), '❗ Image is too large (max 6MB).');
+      }
+      clearErr(document.getElementById('profileErr'));
+      const wrap = document.getElementById('profileAvatarWrap');
+      const spinner = document.createElement('div');
+      spinner.className = 'profile-upload-spinner';
+      spinner.innerHTML = '<span class="spinner"></span>';
+      wrap.appendChild(spinner);
+      try {
+        const photoURL = await uploadProfilePhoto(file);
+        await db.ref(`profiles/${me.username}`).update({ photoURL, statusTs: Date.now() });
+        myPhotoURL = photoURL;
+        paintAvatar(wrap, { photoURL, seed: me.username, name: me.displayName });
+      } catch(err) {
+        console.error('Profile photo upload failed', err);
+        showErr(document.getElementById('profileErr'), '❗ Upload failed. Please try again.');
+      } finally {
+        spinner.remove();
+      }
+    });
+  } catch(e) { console.error('Profile modal wiring failed', e); }
+
+  async function uploadProfilePhoto(file) {
+    // Normalize to a square-cropped canvas once. Reused as either a Blob
+    // (fast path — direct upload to Storage) or a data URL (fallback path —
+    // saved straight into Realtime Database). Previously this always went
+    // through a base64 data URL first, even for Storage uploads, requiring
+    // an extra decode step that slowed every upload down for no benefit.
+    const canvasEl = await cropToSquareCanvas(file);
+
+    if (storage) {
+      try {
+        const blob = await new Promise(res => canvasEl.toBlob(res, 'image/jpeg', 0.88));
+        const ref = storage.ref().child(`profilePhotos/${me.username}/${Date.now()}.jpg`);
+        await ref.put(blob, { contentType: 'image/jpeg' });
+        return await ref.getDownloadURL();
+      } catch(e) {
+        console.warn('Storage upload failed, falling back to base64', e);
+      }
+    }
+    // Fallback: base64 data URL saved directly in Realtime Database.
+    return canvasEl.toDataURL('image/jpeg', 0.88);
+  }
+
+  // Downscale AND center-crop to a square, so every profile photo fits its
+  // round avatar frame consistently no matter the original size or aspect
+  // ratio (portrait, landscape, panorama, tiny, huge — all normalized here).
+  // Returns the drawn <canvas> itself so callers can pull either a Blob
+  // (upload) or a data URL (fallback) from it without redoing the work.
+  // Uses createImageBitmap when available — it decodes directly from the
+  // File/Blob (often off the main thread) instead of round-tripping through
+  // a base64 data URL via FileReader + <img>, which is the slower path.
+  async function cropToSquareCanvas(file, targetSize = 512) {
+    let bitmap;
+    if (window.createImageBitmap) {
+      try { bitmap = await createImageBitmap(file); } catch(e) { bitmap = null; }
+    }
+    const source = bitmap || await fileToImageElement(file);
+    const width = bitmap ? bitmap.width : source.width;
+    const height = bitmap ? bitmap.height : source.height;
+    const side = Math.min(width, height);
+    const sx = (width - side) / 2;
+    const sy = (height - side) / 2;
+    const canvasEl = document.createElement('canvas');
+    canvasEl.width = targetSize; canvasEl.height = targetSize;
+    canvasEl.getContext('2d').drawImage(source, sx, sy, side, side, 0, 0, targetSize, targetSize);
+    if (bitmap && bitmap.close) bitmap.close();
+    return canvasEl;
+  }
+
+  // Fallback decode path for browsers without createImageBitmap support.
+  function fileToImageElement(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read failed'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('image decode failed'));
+        img.onload = () => resolve(img);
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ================================================================
   // BOOT — Auto-login or show auth
   // ================================================================
-  if (loadSession()) {
-    await enterApp();
-  } else {
+  try {
+    if (loadSession()) {
+      await enterApp();
+    } else {
+      showScreen('authScreen');
+    }
+  } catch(e) {
+    console.error('Boot failed', e);
     showScreen('authScreen');
   }
 
