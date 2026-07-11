@@ -483,6 +483,13 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   padding: 14px 20px; border-bottom: 2px solid var(--line);
   display: flex; align-items: center; gap: 12px; flex-shrink: 0;
   background: rgba(20,19,48,0.92); backdrop-filter: blur(14px);
+  /* backdrop-filter creates its own stacking context, which otherwise traps
+     the kebab dropdown below the later-in-DOM #messages list (that list
+     paints after .chat-head and would sit on top of everything inside it,
+     dropdown included, since neither had an explicit stacking order against
+     the other). Giving chat-head a real position + z-index above #messages
+     fixes that once and for all. */
+  position: relative; z-index: 20;
 }
 .back-btn {
   display: none; background: none; border: none;
@@ -506,6 +513,27 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   display: flex; align-items: center; gap: 6px; margin-top: 2px; font-weight: 700;
 }
 .online-label { color: var(--lime); font-weight: 900; }
+
+/* Typing indicator — header label */
+.typing-label { color: var(--purple); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+.typing-dots { display: inline-flex; align-items: center; gap: 2px; }
+.typing-dots span {
+  width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+  display: inline-block; animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Typing indicator — Instagram-style bouncing-dots bubble in the thread */
+.typing-bubble-row { animation: popIn 0.15s ease; }
+.typing-bubble {
+  padding: 12px 16px !important; display: flex; align-items: center;
+}
+.typing-bubble .typing-dots span { background: var(--muted); width: 6px; height: 6px; }
 .head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .paint-fab {
   background: var(--brand-grad); border: none; cursor: pointer;
@@ -593,7 +621,8 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   user-select: none; line-height: 1; white-space: nowrap; font-weight: 700;
 }
 .msg-row.theirs .msg-meta { color: var(--muted); }
-.msg-tick { font-size: 9px; color: var(--lime); font-weight: 900; }
+.msg-tick { font-size: 9px; color: var(--red); font-weight: 900; transition: color 0.2s ease; }
+.msg-tick.seen { color: #4FC3F7; } /* blue tick once the friend has read it */
 
 .msg-row.system { align-self: center; max-width: 90%; margin: 8px 0; }
 .msg-row.system .msg-bubble {
@@ -610,6 +639,70 @@ input::placeholder { color: #3A3870; font-weight: 600; }
   border: 2px solid rgba(255,255,255,0.1);
 }
 .msg-img:hover { opacity: 0.9; transform: scale(1.02); border-color: var(--purple); }
+
+/* ================================================================
+   SWIPE-TO-REPLY
+================================================================ */
+.msg-row { touch-action: pan-y; transition: transform 0.18s ease; }
+.msg-row.swiping { transition: none; }
+.msg-swipe-reply-icon {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 18px; opacity: 0; transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.msg-row.mine .msg-swipe-reply-icon { left: -34px; }
+.msg-row.theirs .msg-swipe-reply-icon { right: -34px; }
+
+/* Quoted reply block shown inside a bubble that is replying to another msg */
+.msg-reply-quote {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 10px; margin-bottom: 6px;
+  border-left: 3px solid rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.15); border-radius: 8px;
+  cursor: pointer; max-width: 100%;
+}
+.msg-row.theirs .msg-reply-quote { border-left-color: var(--sky); background: rgba(255,255,255,0.04); }
+.msg-reply-quote-name { font-size: 11px; font-weight: 900; opacity: 0.9; }
+.msg-reply-quote-text {
+  font-size: 12.5px; opacity: 0.75; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+}
+
+/* Reply preview bar above composer, shown while composing a reply */
+.reply-preview-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; margin: 0 20px;
+  background: var(--panel-raised); border: 2px solid var(--line);
+  border-bottom: none; border-radius: var(--radius-md) var(--radius-md) 0 0;
+  animation: slideUp 0.15s ease;
+}
+.reply-preview-accent { width: 3px; align-self: stretch; background: var(--purple); border-radius: 2px; flex-shrink: 0; }
+.reply-preview-body { flex: 1; min-width: 0; }
+.reply-preview-name { font-size: 11.5px; font-weight: 900; color: var(--purple); }
+.reply-preview-text {
+  font-size: 12.5px; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; margin-top: 2px; font-weight: 600;
+}
+.reply-preview-close {
+  background: none; border: none; color: var(--muted); font-size: 15px;
+  cursor: pointer; padding: 4px 6px; flex-shrink: 0; border-radius: 6px;
+  transition: all 0.15s ease;
+}
+.reply-preview-close:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
+/* Edited label */
+.msg-edited-tag { font-size: 9.5px; opacity: 0.75; font-style: italic; font-weight: 700; }
+
+/* Failed-to-send state */
+.msg-row.failed .msg-bubble { opacity: 0.72; }
+.msg-failed-row {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--danger); font-weight: 800;
+  margin-top: 3px; cursor: pointer; user-select: none;
+}
+.msg-failed-row:hover { text-decoration: underline; }
+.msg-row.mine .msg-failed-row { align-self: flex-end; }
+.msg-row.pending .msg-meta .msg-tick { color: var(--muted); }
 
 /* Composer */
 .composer {
@@ -883,22 +976,29 @@ input::placeholder { color: #3A3870; font-weight: 600; }
 .kebab-btn.open { background: var(--panel-raised); border-color: var(--purple); color: var(--purple); }
 .kebab-dropdown {
   position: absolute; top: calc(100% + 6px); right: 0;
-  min-width: 190px; background: var(--panel-raised);
+  min-width: 190px;
+  /* Solid, fully-opaque backing (isolated stacking context + no inherited
+     blur/opacity) so message bubbles behind the chat header can never show
+     through the menu text. */
+  background: var(--panel-raised); background-color: var(--panel-raised);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  isolation: isolate;
   border: 1.5px solid var(--line); border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 50; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.65); z-index: 500; overflow: hidden;
   opacity: 0; transform: translateY(-8px) scale(0.96);
   pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .kebab-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
 .kebab-dropdown-item {
-  display: flex; align-items: center; gap: 10px;
+  position: relative; display: flex; align-items: center; gap: 10px;
   padding: 12px 16px; cursor: pointer;
   font-family: var(--font-body); font-size: 13px;
   font-weight: 700; color: var(--text);
-  transition: background 0.12s ease; border: none;
-  background: none; width: 100%; text-align: left;
+  background-color: var(--panel-raised);
+  transition: background-color 0.12s ease; border: none;
+  width: 100%; text-align: left;
 }
-.kebab-dropdown-item:hover { background: rgba(171,71,188,0.1); }
+.kebab-dropdown-item:hover { background-color: var(--panel-hover); }
 .kebab-dropdown-item .kebab-icon { font-size: 16px; width: 22px; text-align: center; }
 .kebab-dropdown-divider { height: 1.5px; background: var(--line); margin: 2px 0; }
 
@@ -1368,6 +1468,14 @@ input::placeholder { color: #3A3870; font-weight: 600; }
         </div>
       </div>
       <div id="messages"></div>
+      <div class="reply-preview-bar hidden" id="replyPreviewBar">
+        <div class="reply-preview-accent"></div>
+        <div class="reply-preview-body">
+          <div class="reply-preview-name" id="replyPreviewName">Replying to</div>
+          <div class="reply-preview-text" id="replyPreviewText"></div>
+        </div>
+        <button class="reply-preview-close" id="replyPreviewClose">✕</button>
+      </div>
       <div class="composer">
         <textarea id="msgInput" rows="1" placeholder="Say something fun… 😄"></textarea>
         <button class="send-btn" id="sendBtn">➤</button>
@@ -1468,6 +1576,35 @@ input::placeholder { color: #3A3870; font-weight: 600; }
     <button class="btn" id="deleteForMeBtn" style="margin-top:16px; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">Delete for Me 👤</button>
     <button class="btn" id="deleteForEveryoneBtn" style="margin-top:10px; background:var(--red); color:#fff; box-shadow:none;">Delete for Everyone 👥</button>
     <button class="btn" id="deleteCancelBtn" style="margin-top:10px; background:transparent; border:none; color:var(--muted); box-shadow:none;">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MESSAGE ACTION SHEET (long-press) — Reply / Edit / Delete
+════════════════════════════════════════ -->
+<div id="msgActionModal" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:320px; text-align:center; padding:22px;">
+    <div class="modal-title" style="margin-bottom:14px;">Message Options</div>
+    <button class="btn" id="actionReplyBtn" style="background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">↩️ Reply</button>
+    <button class="btn" id="actionEditBtn" style="margin-top:10px; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">✏️ Edit</button>
+    <div class="err-msg" id="actionEditHint" style="display:none; margin-top:-4px; margin-bottom:10px;">Editing is only available within 15 minutes of sending.</div>
+    <button class="btn" id="actionDeleteBtn" style="margin-top:10px; background:var(--red); color:#fff; box-shadow:none;">🗑️ Delete</button>
+    <button class="btn" id="actionCancelBtn" style="margin-top:10px; background:transparent; border:none; color:var(--muted); box-shadow:none;">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     EDIT MESSAGE MODAL
+════════════════════════════════════════ -->
+<div id="editMsgModal" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:380px;">
+    <div class="modal-title">Edit Message</div>
+    <div class="modal-sub">Update your message below.</div>
+    <textarea id="editMsgInput" rows="3" maxlength="4000" style="margin-top:14px; width:100%; resize:none; background:var(--panel-raised); border:2px solid var(--line); color:var(--text); padding:12px 14px; border-radius:var(--radius-md); font-family:var(--font-body); font-size:14.5px; font-weight:600; outline:none;"></textarea>
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <button class="btn" id="editCancelBtn" style="background:var(--panel-raised); border:2px solid var(--line); color:var(--text); box-shadow:none;">Cancel</button>
+      <button class="btn" id="editSaveBtn" style="background:var(--btn-grad); color:#fff; box-shadow:none;">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1694,6 +1831,9 @@ const FIREBASE_CONFIG = {
   let me = null;
   let activeChat = null;
   let activeRef = null, activeFn = null;
+  let typingRef = null, typingFn = null, friendIsTyping = false, lastKnownOnline = false;
+  let readRef = null, readFn = null, friendLastRead = 0;
+  let myTypingActive = false, myTypingTimer = null;
   let presTimer = null;
   let db = null;
 
@@ -1950,6 +2090,8 @@ const FIREBASE_CONFIG = {
   async function openChat(chatId, friendUsername, friendDisplay) {
     activeChat = { chatId, friendUsername, friendDisplay };
     document.body.classList.add('chat-open');
+    failedSends = {};
+    clearReplyTarget();
 
     document.querySelectorAll('.chat-item').forEach(el =>
       el.classList.toggle('active', el.getAttribute('data-chatid')===chatId)
@@ -1975,10 +2117,30 @@ const FIREBASE_CONFIG = {
     document.getElementById('activeChat').dataset.accentColor = accentColor;
 
     db.ref(`presence/${friendUsername}`).on('value', snap => {
-      const online = snap.exists() && snap.val().online && (Date.now()-snap.val().ts<35000);
-      document.getElementById('headSub').innerHTML = online
-        ? `<span class="online-label">● online now</span>`
-        : `<span style="color:var(--muted)">@${esc(friendUsername)}</span>`;
+      lastKnownOnline = snap.exists() && snap.val().online && (Date.now()-snap.val().ts<35000);
+      updateHeadSub(friendUsername);
+    });
+
+    // Typing indicator (Instagram-style "... is typing"): listen for the
+    // friend's typing flag in this chat and reflect it in the header + a
+    // bouncing-dots bubble at the bottom of the thread.
+    if (typingRef && typingFn) typingRef.off('value', typingFn);
+    typingRef = db.ref(`typing/${chatId}/${friendUsername}`);
+    typingFn = typingRef.on('value', snap => {
+      const v = snap.val();
+      friendIsTyping = !!(v && v.typing && (Date.now() - v.ts < 8000));
+      updateHeadSub(friendUsername);
+      renderTypingBubble();
+    });
+
+    // Read receipts: mark everything as read the moment the chat is open,
+    // then keep marking as new messages arrive while it stays open.
+    markChatRead(chatId);
+    if (readRef && readFn) readRef.off('value', readFn);
+    readRef = db.ref(`lastRead/${chatId}/${friendUsername}`);
+    readFn = readRef.on('value', snap => {
+      friendLastRead = (snap.val() && snap.val().ts) || 0;
+      updateTickMarks();
     });
 
     if (activeRef && activeFn) { activeRef.off('value', activeFn); }
@@ -2007,11 +2169,17 @@ const FIREBASE_CONFIG = {
       msgs.sort((a,b)=>a.ts-b.ts);
       container.innerHTML = '';
 
+      // Keep a lookup of this render pass's decrypted texts so reply-quotes
+      // can show a live snippet of the original message (falls back to the
+      // snippet stored at reply time if the original was since deleted).
+      const textById = {};
+
       let lastDate=null, prevSender=null, prevTs=0;
       for (const m of msgs) {
         let text = '';
         if (m.ct) text = await decrypt(chatId, m.ct, m.iv);
         else if (m.text) text = m.text;
+        textById[m.id] = text;
 
         const msgDate = new Date(m.ts).toDateString();
         if (msgDate !== lastDate) {
@@ -2033,6 +2201,9 @@ const FIREBASE_CONFIG = {
           const mine = m.sender===me.username;
           row.className=`msg-row ${mine?'mine':'theirs'}${consec?' consecutive':''}`;
           let body = '';
+          const isSpecialCard = text.startsWith('data:image/')
+            || (text.startsWith('[BOMB_DUEL_INVITE:') && text.endsWith(']'))
+            || (text.startsWith('[XO_INVITE:') && text.endsWith(']'));
           if (text.startsWith('data:image/')) {
             body = `<img src="${text}" class="msg-img" alt="Drawing">`;
           } else if (text.startsWith('[BOMB_DUEL_INVITE:') && text.endsWith(']')) {
@@ -2069,49 +2240,335 @@ const FIREBASE_CONFIG = {
           bubble.className='msg-bubble';
           bubble.dataset.msgid = m.id;
           bubble.dataset.sender = m.sender;
-          bubble.innerHTML=`${body}<div class="msg-meta"><span>${fmtTime(m.ts)}</span>${mine?'<span class="msg-tick">✓✓</span>':''}</div>`;
+          bubble.dataset.ts = m.ts;
+          bubble.dataset.isCard = isSpecialCard ? '1' : '0';
+
+          let replyHtml = '';
+          if (m.replyTo) {
+            const liveText = textById[m.replyTo.id];
+            const snippet = (liveText!==undefined ? liveText : (m.replyTo.snippet||'')) || '';
+            const shortSnip = snippet.startsWith('data:image/') ? '📷 Photo'
+              : snippet.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel invite'
+              : snippet.startsWith('[XO_INVITE:') ? '❌⭕ XO Game invite'
+              : snippet;
+            replyHtml = `<div class="msg-reply-quote" data-jumpto="${esc(m.replyTo.id)}">
+                <div class="msg-reply-quote-name">${esc(m.replyTo.senderDisplay || m.replyTo.sender || '')}</div>
+                <div class="msg-reply-quote-text">${esc(shortSnip)}</div>
+              </div>`;
+          }
+
+          const editedTag = (m.edited ? '<span class="msg-edited-tag">edited</span>' : '');
+          bubble.innerHTML=`${replyHtml}${body}<div class="msg-meta">${editedTag}<span>${fmtTime(m.ts)}</span>${mine?'<span class="msg-tick">✓✓</span>':''}</div>`;
           row.appendChild(bubble);
 
-          // Long press gesture detection
+          if (m.replyTo) {
+            const q = bubble.querySelector('.msg-reply-quote');
+            if (q) q.addEventListener('click', () => jumpToMessage(m.replyTo.id));
+          }
+
+          // Long press -> action sheet (Reply / Edit / Delete)
           let pressTimer = null;
-          const startPress = (e) => {
-            if (m.system) return;
+          let pressMoved = false;
+          const startPress = () => {
+            pressMoved = false;
             pressTimer = setTimeout(() => {
-              showDeleteMenu(m.id, m.sender);
-            }, 600);
+              if (!pressMoved) showMsgActionSheet(m.id, m.sender, m.ts, isSpecialCard);
+            }, 550);
           };
-          const endPress = () => {
-            if (pressTimer) clearTimeout(pressTimer);
-          };
+          const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
+          const movePress = () => { pressMoved = true; cancelPress(); };
 
           bubble.addEventListener('mousedown', startPress);
-          bubble.addEventListener('mouseup', endPress);
-          bubble.addEventListener('mouseleave', endPress);
+          bubble.addEventListener('mouseup', cancelPress);
+          bubble.addEventListener('mouseleave', cancelPress);
           bubble.addEventListener('touchstart', startPress, {passive: true});
-          bubble.addEventListener('touchend', endPress, {passive: true});
-          bubble.addEventListener('touchmove', endPress, {passive: true});
+          bubble.addEventListener('touchend', cancelPress, {passive: true});
+
+          // Swipe-to-reply (WhatsApp style): drag the bubble horizontally,
+          // release past the threshold to attach it as the active reply.
+          wireSwipeToReply(row, bubble, m, movePress);
         }
         container.appendChild(row);
       }
+      renderFailedSends();
+      renderTypingBubble();
+      updateTickMarks();
+      // Chat is open and visibly showing these messages — mark them read so
+      // the sender's ticks flip blue. Cheap no-op if nothing changed.
+      markChatRead(chatId);
       if (atBottom||msgs.length<=2) container.scrollTop=container.scrollHeight;
     });
   }
 
   // ================================================================
+  // TYPING INDICATOR + READ RECEIPTS — helpers
+  // ================================================================
+  function updateHeadSub(friendUsername) {
+    const el = document.getElementById('headSub');
+    if (!activeChat) return;
+    if (friendIsTyping) {
+      el.innerHTML = `<span class="typing-label">typing<span class="typing-dots"><span></span><span></span><span></span></span></span>`;
+    } else if (lastKnownOnline) {
+      el.innerHTML = `<span class="online-label">● online now</span>`;
+    } else {
+      el.innerHTML = `<span style="color:var(--muted)">@${esc(friendUsername)}</span>`;
+    }
+  }
+
+  function renderTypingBubble() {
+    const container = document.getElementById('messages');
+    if (!container) return;
+    let bubbleRow = container.querySelector('.typing-bubble-row');
+    if (friendIsTyping) {
+      if (!bubbleRow) {
+        bubbleRow = document.createElement('div');
+        bubbleRow.className = 'msg-row theirs typing-bubble-row';
+        bubbleRow.innerHTML = `<div class="msg-bubble typing-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
+        container.appendChild(bubbleRow);
+      }
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
+      if (atBottom) container.scrollTop = container.scrollHeight;
+    } else if (bubbleRow) {
+      bubbleRow.remove();
+    }
+  }
+
+  // Marks "now" as the last-read timestamp for me, in this chat, so the
+  // other person's sent messages flip their tick to "seen" (blue).
+  function markChatRead(chatId) {
+    if (!me) return;
+    db.ref(`lastRead/${chatId}/${me.username}`).set({ ts: Date.now() });
+  }
+
+  // Re-colors every one of my own tick marks already in the DOM based on
+  // whether the friend's lastRead timestamp has caught up to that message.
+  function updateTickMarks() {
+    document.querySelectorAll('.msg-row.mine .msg-tick').forEach(tick => {
+      const bubble = tick.closest('.msg-bubble');
+      if (!bubble) return;
+      const ts = Number(bubble.dataset.ts || 0);
+      const seen = ts && friendLastRead >= ts;
+      tick.classList.toggle('seen', !!seen);
+    });
+  }
+
+  // Broadcasts "I'm typing" to the friend while the composer has text, and
+  // auto-clears it a few seconds after the user stops typing or sends.
+  function notifyTyping() {
+    if (!activeChat) return;
+    const { chatId } = activeChat;
+    if (!myTypingActive) {
+      myTypingActive = true;
+      db.ref(`typing/${chatId}/${me.username}`).set({ typing: true, ts: Date.now() });
+    } else {
+      db.ref(`typing/${chatId}/${me.username}`).update({ ts: Date.now() });
+    }
+    clearTimeout(myTypingTimer);
+    myTypingTimer = setTimeout(() => stopTyping(), 3000);
+  }
+  function stopTyping() {
+    clearTimeout(myTypingTimer);
+    if (!myTypingActive || !activeChat) { myTypingActive = false; return; }
+    myTypingActive = false;
+    const { chatId } = activeChat;
+    db.ref(`typing/${chatId}/${me.username}`).set({ typing: false, ts: Date.now() });
+  }
+
+  // ================================================================
+  // JUMP TO MESSAGE (tapping a reply-quote scrolls to & flashes the original)
+  // ================================================================
+  function jumpToMessage(msgId) {
+    const target = document.querySelector(`.msg-bubble[data-msgid="${msgId}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.style.transition = 'none';
+    target.style.boxShadow = '0 0 0 3px var(--purple)';
+    setTimeout(() => {
+      target.style.transition = 'box-shadow 0.6s ease';
+      target.style.boxShadow = '';
+    }, 500);
+  }
+
+  // ================================================================
+  // SWIPE-TO-REPLY
+  // ================================================================
+  function wireSwipeToReply(row, bubble, m, notifyMoved) {
+    const THRESHOLD = 56;
+    let startX = 0, startY = 0, dx = 0, dragging = false, decided = false, isHorizontal = false;
+
+    const reset = () => {
+      row.classList.remove('swiping');
+      row.style.transform = '';
+      dragging = false; decided = false; isHorizontal = false; dx = 0;
+    };
+
+    const onStart = (clientX, clientY) => {
+      startX = clientX; startY = clientY; dx = 0;
+      dragging = true; decided = false; isHorizontal = false;
+    };
+    const onMove = (clientX, clientY, evt) => {
+      if (!dragging) return;
+      const moveX = clientX - startX;
+      const moveY = clientY - startY;
+      if (!decided) {
+        if (Math.abs(moveX) > 8 || Math.abs(moveY) > 8) {
+          decided = true;
+          isHorizontal = Math.abs(moveX) > Math.abs(moveY);
+        } else {
+          return;
+        }
+      }
+      if (!isHorizontal) return; // let vertical scroll happen normally
+      if (notifyMoved) notifyMoved();
+      // Clamp: only allow the "reveal reply" direction, capped distance.
+      let clamped = moveX;
+      const maxDrag = 84;
+      if (clamped > maxDrag) clamped = maxDrag;
+      if (clamped < -maxDrag) clamped = -maxDrag;
+      dx = clamped;
+      row.classList.add('swiping');
+      row.style.transform = `translateX(${dx}px)`;
+      if (evt && evt.cancelable) evt.preventDefault();
+    };
+    const onEnd = () => {
+      if (!dragging) return;
+      if (isHorizontal && Math.abs(dx) > THRESHOLD) {
+        setReplyTarget(m);
+        if (navigator.vibrate) { try { navigator.vibrate(12); } catch(e) {} }
+      }
+      reset();
+    };
+
+    bubble.addEventListener('touchstart', e => {
+      const t = e.touches[0]; onStart(t.clientX, t.clientY);
+    }, {passive: true});
+    bubble.addEventListener('touchmove', e => {
+      const t = e.touches[0]; onMove(t.clientX, t.clientY, e);
+    }, {passive: false});
+    bubble.addEventListener('touchend', onEnd, {passive: true});
+
+    // Mouse support (desktop testing)
+    bubble.addEventListener('mousedown', e => { onStart(e.clientX, e.clientY); });
+    const mouseMoveHandler = e => onMove(e.clientX, e.clientY, e);
+    const mouseUpHandler = () => onEnd();
+    bubble.addEventListener('mousedown', () => {
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler, { once: true });
+    });
+  }
+
+  // ================================================================
+  // REPLY STATE
+  // ================================================================
+  let activeReply = null; // { id, sender, senderDisplay, snippet }
+
+  function setReplyTarget(m) {
+    decrypt(activeChat.chatId, m.ct, m.iv).then(text => {
+      if (!text && m.text) text = m.text;
+      const display = m.sender===me.username ? 'Yourself' : (m.senderDisplay || m.sender);
+      const shortSnip = text.startsWith('data:image/') ? '📷 Photo'
+        : text.startsWith('[BOMB_DUEL_INVITE:') ? '💣 Bomb Duel invite'
+        : text.startsWith('[XO_INVITE:') ? '❌⭕ XO Game invite'
+        : text;
+      activeReply = { id: m.id, sender: m.sender, senderDisplay: m.senderDisplay || m.sender, snippet: shortSnip.slice(0, 200) };
+      document.getElementById('replyPreviewName').textContent = `Replying to ${display}`;
+      document.getElementById('replyPreviewText').textContent = shortSnip;
+      document.getElementById('replyPreviewBar').classList.remove('hidden');
+      document.getElementById('msgInput').focus();
+    });
+  }
+  function clearReplyTarget() {
+    activeReply = null;
+    document.getElementById('replyPreviewBar').classList.add('hidden');
+  }
+  document.getElementById('replyPreviewClose').addEventListener('click', clearReplyTarget);
+
+  // ================================================================
   // SEND MESSAGE
   // ================================================================
-  async function sendMsg(text) {
-    if (!text || !activeChat) return;
-    const {chatId, friendUsername} = activeChat;
-    const {ct, iv} = await encrypt(chatId, text);
-    const ts = Date.now();
-    await db.ref(`chats/${chatId}/messages`).push({
-      sender: me.username, senderDisplay: me.displayName, ct, iv, ts
+  const SEND_TIMEOUT_MS = 15000;
+
+  function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('timeout')), ms);
+      promise.then(v => { clearTimeout(timer); resolve(v); },
+                   e => { clearTimeout(timer); reject(e); });
     });
-    await Promise.all([
-      db.ref(`userChats/${me.username}/${chatId}/updatedAt`).set(ts),
-      db.ref(`userChats/${friendUsername}/${chatId}/updatedAt`).set(ts)
-    ]);
+  }
+
+  // Returns true on success, false on failure (network error or timeout).
+  // On failure the message is NOT silently dropped — the caller shows a
+  // "failed to send, tap to retry" indicator via failedSends.
+  async function sendMsg(text, replyTo) {
+    if (!text || !activeChat) return false;
+    const {chatId, friendUsername} = activeChat;
+    try {
+      const {ct, iv} = await withTimeout(encrypt(chatId, text), SEND_TIMEOUT_MS);
+      const ts = Date.now();
+      const payload = { sender: me.username, senderDisplay: me.displayName, ct, iv, ts };
+      if (replyTo) payload.replyTo = replyTo;
+      await withTimeout(db.ref(`chats/${chatId}/messages`).push(payload), SEND_TIMEOUT_MS);
+      await withTimeout(Promise.all([
+        db.ref(`userChats/${me.username}/${chatId}/updatedAt`).set(ts),
+        db.ref(`userChats/${friendUsername}/${chatId}/updatedAt`).set(ts)
+      ]), SEND_TIMEOUT_MS);
+      return true;
+    } catch (e) {
+      console.error('sendMsg failed', e);
+      return false;
+    }
+  }
+
+  // Failed-send tracker: localId -> { text, replyTo }. Rendered as a small
+  // standalone "failed to send" row pinned to the bottom of the thread with
+  // a tap-to-retry action, since the message never made it into Firebase.
+  let failedSends = {};
+  let failedSendSeq = 0;
+
+  function renderFailedSends() {
+    const container = document.getElementById('messages');
+    container.querySelectorAll('.msg-row.failed-local').forEach(el => el.remove());
+    Object.entries(failedSends).forEach(([localId, item]) => {
+      const row = document.createElement('div');
+      row.className = 'msg-row mine failed failed-local';
+      row.dataset.localid = localId;
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.innerHTML = `<span class="msg-text">${esc(item.text)}</span><div class="msg-meta"><span>${item.timedOut ? 'Taking too long' : 'Not sent'}</span></div>`;
+      row.appendChild(bubble);
+      const failRow = document.createElement('div');
+      failRow.className = 'msg-failed-row';
+      failRow.innerHTML = `⚠️ ${item.timedOut ? 'Send is taking too long' : 'Failed to send'} — tap to retry`;
+      failRow.addEventListener('click', () => retryFailedSend(localId));
+      row.appendChild(failRow);
+      container.appendChild(row);
+    });
+    if (Object.keys(failedSends).length) container.scrollTop = container.scrollHeight;
+  }
+
+  async function attemptSend(text, replyTo, localId) {
+    let timedOut = false;
+    const timeoutWatcher = setTimeout(() => {
+      timedOut = true;
+      if (failedSends[localId]) { failedSends[localId].timedOut = true; renderFailedSends(); }
+    }, 8000);
+    const ok = await sendMsg(text, replyTo);
+    clearTimeout(timeoutWatcher);
+    if (ok) {
+      delete failedSends[localId];
+      renderFailedSends();
+    } else if (failedSends[localId]) {
+      failedSends[localId].timedOut = timedOut;
+      renderFailedSends();
+    }
+  }
+
+  function retryFailedSend(localId) {
+    const item = failedSends[localId];
+    if (!item) return;
+    item.timedOut = false;
+    renderFailedSends();
+    attemptSend(item.text, item.replyTo, localId);
   }
 
   document.getElementById('sendBtn').addEventListener('click', async (e) => {
@@ -2119,7 +2576,14 @@ const FIREBASE_CONFIG = {
     const t = inp.value.trim(); if (!t) return;
     inp.value=''; inp.style.height='auto';
     burstConfetti(e.clientX, e.clientY);
-    await sendMsg(t);
+    stopTyping();
+    const replyTo = activeReply ? { ...activeReply } : null;
+    clearReplyTarget();
+    const localId = 'local_' + (++failedSendSeq) + '_' + Date.now();
+    failedSends[localId] = { text: t, replyTo, timedOut: false };
+    // Optimistically show nothing extra yet — give the realtime listener a
+    // brief moment to deliver the real message before treating this as slow.
+    attemptSend(t, replyTo, localId);
   });
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); document.getElementById('sendBtn').click(); }
@@ -2127,15 +2591,21 @@ const FIREBASE_CONFIG = {
   document.getElementById('msgInput').addEventListener('input', function() {
     this.style.height='auto';
     this.style.height=Math.min(this.scrollHeight,120)+'px';
+    if (this.value.trim()) notifyTyping(); else stopTyping();
   });
+  document.getElementById('msgInput').addEventListener('blur', stopTyping);
 
   // ================================================================
   // BACK BUTTON
   // ================================================================
   document.getElementById('backBtn').addEventListener('click', () => {
+    stopTyping();
     document.body.classList.remove('chat-open');
     activeChat=null;
     if (activeRef&&activeFn) { activeRef.off('value',activeFn); activeRef=null; activeFn=null; }
+    if (typingRef&&typingFn) { typingRef.off('value',typingFn); typingRef=null; typingFn=null; }
+    if (readRef&&readFn) { readRef.off('value',readFn); readRef=null; readFn=null; }
+    friendIsTyping=false; friendLastRead=0;
     document.getElementById('activeChat').classList.add('hidden');
     document.getElementById('emptyState').classList.remove('hidden');
     document.querySelectorAll('.chat-item').forEach(el=>el.classList.remove('active'));
@@ -2529,6 +2999,106 @@ const FIREBASE_CONFIG = {
   });
 
   // ================================================================
+  // MESSAGE ACTION SHEET (long-press) — Reply / Edit / Delete
+  // ================================================================
+  const EDIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+  let actionSheetMsgId = null;
+  let actionSheetSender = null;
+  let actionSheetTs = null;
+
+  function showMsgActionSheet(msgId, sender, ts, isSpecialCard) {
+    actionSheetMsgId = msgId;
+    actionSheetSender = sender;
+    actionSheetTs = ts;
+    const isMine = sender === me.username;
+    const withinEditWindow = (Date.now() - ts) <= EDIT_WINDOW_MS;
+    const canEdit = isMine && !isSpecialCard;
+
+    document.getElementById('actionEditBtn').classList.toggle('hidden', !canEdit);
+    document.getElementById('actionEditHint').style.display = 'none';
+    if (canEdit) {
+      const editDisabled = !withinEditWindow;
+      document.getElementById('actionEditBtn').disabled = editDisabled;
+      document.getElementById('actionEditBtn').style.opacity = editDisabled ? '0.5' : '1';
+      document.getElementById('actionEditHint').style.display = editDisabled ? 'block' : 'none';
+    }
+    document.getElementById('msgActionModal').classList.remove('hidden');
+  }
+  function hideMsgActionSheet() {
+    document.getElementById('msgActionModal').classList.add('hidden');
+  }
+  document.getElementById('actionCancelBtn').addEventListener('click', hideMsgActionSheet);
+  document.getElementById('msgActionModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('msgActionModal')) hideMsgActionSheet();
+  });
+
+  document.getElementById('actionReplyBtn').addEventListener('click', async () => {
+    if (!actionSheetMsgId || !activeChat) return hideMsgActionSheet();
+    hideMsgActionSheet();
+    const bubble = document.querySelector(`.msg-bubble[data-msgid="${actionSheetMsgId}"]`);
+    const row = bubble ? bubble.closest('.msg-row') : null;
+    if (!row) return;
+    // Re-fetch the message so we have ct/iv for the snippet.
+    const { chatId } = activeChat;
+    const snap = await db.ref(`chats/${chatId}/messages/${actionSheetMsgId}`).get();
+    if (!snap.exists()) return;
+    setReplyTarget({ id: actionSheetMsgId, ...snap.val() });
+  });
+
+  document.getElementById('actionEditBtn').addEventListener('click', async () => {
+    if (document.getElementById('actionEditBtn').disabled) return;
+    if (!actionSheetMsgId || !activeChat) return hideMsgActionSheet();
+    hideMsgActionSheet();
+    const { chatId } = activeChat;
+    const snap = await db.ref(`chats/${chatId}/messages/${actionSheetMsgId}`).get();
+    if (!snap.exists()) return;
+    const data = snap.val();
+    let text = data.ct ? await decrypt(chatId, data.ct, data.iv) : (data.text || '');
+    document.getElementById('editMsgInput').value = text;
+    document.getElementById('editMsgModal').dataset.msgid = actionSheetMsgId;
+    document.getElementById('editMsgModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('editMsgInput').focus(), 80);
+  });
+
+  document.getElementById('editCancelBtn').addEventListener('click', () => {
+    document.getElementById('editMsgModal').classList.add('hidden');
+  });
+  document.getElementById('editMsgModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editMsgModal'))
+      document.getElementById('editMsgModal').classList.add('hidden');
+  });
+  document.getElementById('editSaveBtn').addEventListener('click', async () => {
+    const modal = document.getElementById('editMsgModal');
+    const msgId = modal.dataset.msgid;
+    const newText = document.getElementById('editMsgInput').value.trim();
+    if (!msgId || !newText || !activeChat) { modal.classList.add('hidden'); return; }
+    const { chatId } = activeChat;
+    try {
+      const msgRef = db.ref(`chats/${chatId}/messages/${msgId}`);
+      const snap = await msgRef.get();
+      if (!snap.exists()) { modal.classList.add('hidden'); return; }
+      const data = snap.val();
+      if ((Date.now() - data.ts) > EDIT_WINDOW_MS) {
+        modal.classList.add('hidden');
+        alert('The 15-minute editing window for this message has passed.');
+        return;
+      }
+      const { ct, iv } = await encrypt(chatId, newText);
+      await msgRef.update({ ct, iv, edited: true, editedAt: Date.now() });
+    } catch (e) {
+      console.error('Failed to edit message', e);
+      alert('Could not save your edit — please check your connection and try again.');
+    }
+    modal.classList.add('hidden');
+  });
+
+  document.getElementById('actionDeleteBtn').addEventListener('click', () => {
+    if (!actionSheetMsgId) return hideMsgActionSheet();
+    hideMsgActionSheet();
+    showDeleteMenu(actionSheetMsgId, actionSheetSender);
+  });
+
+  // ================================================================
   // DELETE INDIVIDUAL MESSAGE
   // ================================================================
   let selectedMsgId = null;
@@ -2782,6 +3352,12 @@ const FIREBASE_CONFIG = {
       xoRenderBoard(data.board || Array(9).fill(''), !isMyTurn, data.moves||[]);
       xoCheckForAnimation(data);
     } else if (phase==='finished') {
+      // If the other player already tapped Rematch, follow them into the new
+      // game automatically instead of sitting stuck on this finished board.
+      if (data.rematchGameId) {
+        xoFollowRematch(data.chatId || (activeChat && activeChat.chatId), data.rematchGameId);
+        return;
+      }
       document.getElementById('xoLeftBanner').classList.add('hidden');
       xoRenderBoard(data.board || Array(9).fill(''), true, data.moves||[]);
       xoHighlightWinCombo(data.board || []);
@@ -2881,10 +3457,16 @@ const FIREBASE_CONFIG = {
 
   // Rematch: swap the starting symbol so whoever was O last time gets X next —
   // "if 1st time I get O, next match I get X", alternating every game.
+  // NOTE: both players' clients are listening to the OLD game ref. So instead of
+  // silently switching only the clicker to a new ref (which stranded the other
+  // player on "Waiting for opponent" forever), we write the new game's id onto
+  // the OLD (finished) node as `rematchGameId`. The opponent's still-active
+  // listener picks that up in xoOnGameUpdate() and auto-follows into the new game.
   async function xoRematch() {
     if (!xoGameRef || !activeChat) return;
     const snap = await xoGameRef.get();
     const data = snap.val(); if (!data) return;
+    if (data.rematchGameId) { xoFollowRematch(data.chatId || activeChat.chatId, data.rematchGameId); return; }
     const newMatchCount = (data.matchCount||1)+1;
     const newStartSymbol = data.startingSymbol==='X' ? 'O' : 'X';
     // Swap X/O between the two players each rematch, so whoever was O last
@@ -2905,13 +3487,22 @@ const FIREBASE_CONFIG = {
       matchCount: newMatchCount, startingSymbol: newStartSymbol, ts: Date.now(),
       connected: { [me.username]: true }
     };
-    xoGameRef.off('value', xoListener);
+    const oldGameRef = xoGameRef;
+    await db.ref(`xoGame/${chatId}/${newId}`).set(newGame);
+    await oldGameRef.child('rematchGameId').set(newId);
+    xoFollowRematch(chatId, newId);
+  }
+
+  // Both the rematch-initiator and the opponent land here: switch listeners
+  // over to the freshly created game so nobody gets stuck on the old node.
+  function xoFollowRematch(chatId, newId) {
+    if (xoGameRef && xoListener) xoGameRef.off('value', xoListener);
     xoClearPresenceWatchers();
     xoGameId = newId;
     xoGameRef = db.ref(`xoGame/${chatId}/${newId}`);
-    await xoGameRef.set(newGame);
+    xoGameRef.child(`connected/${me.username}`).set(true);
     xoGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
-    xoLastMoveCount=0;
+    xoLastMoveCount = 0;
     xoOpenModal();
     xoStartListening(chatId, newId);
   }
@@ -3150,6 +3741,12 @@ const FIREBASE_CONFIG = {
       bdRenderOpGrid_Playing(data, myU, opU, isMyTurn);
       bdCheckForAnimation(data, myU);
     } else if (phase==='finished') {
+      // If the other player already tapped Rematch, follow them into the new
+      // game automatically instead of sitting stuck on this finished board.
+      if (data.rematchGameId) {
+        bdFollowRematch(data.chatId || (activeChat && activeChat.chatId), data.rematchGameId);
+        return;
+      }
       document.getElementById('bdPlacingHint').classList.add('hidden');
       document.getElementById('bdLeftBanner').classList.add('hidden');
       const winnerName = data.playerNames?.[data.winner] || data.winner;
@@ -3353,10 +3950,15 @@ const FIREBASE_CONFIG = {
     }
   }
 
+  // Same pattern as xoRematch: don't just swap the clicker's own ref, since the
+  // opponent is still listening on the old (finished) node and would be
+  // stranded on "Waiting for opponent". Write the new id onto the old node so
+  // the opponent's listener (bdOnGameUpdate) can auto-follow.
   async function bdRematch() {
     if (!bdGameRef || !activeChat) return;
     const snap = await bdGameRef.get();
     const data = snap.val(); if (!data) return;
+    if (data.rematchGameId) { bdFollowRematch(data.chatId || activeChat.chatId, data.rematchGameId); return; }
     const newMatchCount = (data.matchCount||1)+1;
     const newStarting = data.startingPlayer==='player1' ? 'player2' : 'player1';
     const newId = bdGenId();
@@ -3369,13 +3971,21 @@ const FIREBASE_CONFIG = {
       matchCount:newMatchCount, startingPlayer:newStarting, ts:Date.now(),
       connected: { [me.username]: true }
     };
-    bdGameRef.off('value', bdListener);
+    const oldGameRef = bdGameRef;
+    await db.ref(`bombDuel/${chatId}/${newId}`).set(newGame);
+    await oldGameRef.child('rematchGameId').set(newId);
+    bdFollowRematch(chatId, newId);
+  }
+
+  // Both the rematch-initiator and the opponent land here.
+  function bdFollowRematch(chatId, newId) {
+    if (bdGameRef && bdListener) bdGameRef.off('value', bdListener);
     bdClearPresenceWatchers();
-    bdGameId=newId;
-    bdGameRef=db.ref(`bombDuel/${chatId}/${newId}`);
-    await bdGameRef.set(newGame);
+    bdGameId = newId;
+    bdGameRef = db.ref(`bombDuel/${chatId}/${newId}`);
+    bdGameRef.child(`connected/${me.username}`).set(true);
     bdGameRef.child(`connected/${me.username}`).onDisconnect().set(false);
-    bdMyBombs=[]; bdLastMoveCount=0;
+    bdMyBombs = []; bdLastMoveCount = 0;
     bdOpenModal();
     bdStartListening(chatId, newId);
   }
@@ -3417,6 +4027,9 @@ const FIREBASE_CONFIG = {
   window.addEventListener('beforeunload', () => {
     if (bdGameRef && bdPhase!=='idle') {
       try { bdGameRef.child(`connected/${me.username}`).set(false); } catch(e) {}
+    }
+    if (myTypingActive && activeChat) {
+      try { db.ref(`typing/${activeChat.chatId}/${me.username}`).set({ typing: false, ts: Date.now() }); } catch(e) {}
     }
   });
 
