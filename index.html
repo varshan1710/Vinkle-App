@@ -4905,8 +4905,16 @@ const FIREBASE_CONFIG = {
   // they call, we flip an actual random result and compare it to their call
   // — call matches => caller starts, call misses => the other player starts.
   async function xoBeginCoinToss(gameRef) {
+    // NOTE: Firebase's local SDK cache can invoke this callback speculatively
+    // with `current === null` on its very first pass for a node it hasn't
+    // cached yet, even though the value on the server is genuinely
+    // 'waiting_opponent' (confirmed moments earlier via a plain .get()).
+    // Treating null as "already advanced" caused the transaction to abort
+    // immediately and permanently stall the game on "waiting_opponent" —
+    // only truly abort when we know the phase has moved to a later stage.
+    const LATER_PHASES = ['coin_call', 'coin_toss', 'playing', 'finished'];
     await gameRef.child('phase').transaction(current => {
-      if (current !== 'waiting_opponent') return; // already advanced — abort
+      if (LATER_PHASES.includes(current)) return; // already advanced — abort
       return 'coin_call';
     });
   }
@@ -4932,7 +4940,7 @@ const FIREBASE_CONFIG = {
     const other = players.find(p => p !== caller);
     const starter = (result === freshData.coinCall) ? caller : other;
     await xoGameRef.child('phase').transaction(current => {
-      if (current !== 'coin_call') return;
+      if (current === 'coin_toss' || current === 'playing' || current === 'finished') return; // already advanced — abort
       return 'coin_toss';
     });
     await xoGameRef.child('coinToss').transaction(current => {
@@ -5403,7 +5411,7 @@ const FIREBASE_CONFIG = {
     const other = players.find(p => p !== caller);
     const starter = (result === freshData.coinCall) ? caller : other;
     await bdGameRef.child('phase').transaction(current => {
-      if (current !== 'coin_call') return;
+      if (current === 'coin_toss' || current === 'playing' || current === 'finished') return; // already advanced — abort
       return 'coin_toss';
     });
     await bdGameRef.child('coinToss').transaction(current => {
@@ -5658,7 +5666,7 @@ const FIREBASE_CONFIG = {
       // Both players are ready — hand off to a fair coin call/toss to decide
       // who actually gets the first turn, instead of always favoring player1.
       await bdGameRef.child('phase').transaction(current => {
-        if (current !== 'placing') return; // someone else already flipped it — abort
+        if (current === 'coin_call' || current === 'coin_toss' || current === 'playing' || current === 'finished') return; // already advanced — abort
         return 'coin_call';
       });
       await bdGameRef.update({
